@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPA 自由空间光通信仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232fd7d7'/%3E%3Cstop offset='1' stop-color='%234aa8ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='url(%23g)' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- ============ 顶部导航 ============ -->
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <svg class="logo" viewBox="0 0 32 32">
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2fd7d7"/><stop offset="1" stop-color="#4aa8ff"/>
+      </linearGradient></defs>
+      <path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="url(#lg)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home active" href="index.html">平台首页</a>
+    <a href="modules/module1-pat.html">M1 PAT闭环</a>
+    <a href="modules/module2-multiwavelength.html">M2 多波长</a>
+    <a href="modules/module3-deeplearning.html">M3 深度学习</a>
+    <a href="modules/module4-monolithic.html">M4 单片集成</a>
+    <a href="modules/module5-algorithms.html">M5 算法优化</a>
+    <a href="modules/module6-highspeed.html">M6 高速扫描</a>
+  </nav>
+</header>
+
+<!-- ============ Hero ============ -->
+<section class="hero">
+  <span class="kicker">校创项目 · 基于 OPA 的空间光通信 · 文献复现</span>
+  <h1>光学相控阵自由空间光通信<br>交互式仿真平台</h1>
+  <p class="lead">
+    一个在浏览器中即可运行的 OPA 仿真工作台：六个模块分别完整复现六篇核心文献，
+    覆盖<strong style="color:var(--text)">波束转向、相位校准、相干合成、深度学习、优化算法与高速扫描</strong>。
+    每个模块都内置可调参数、实时方向图 / 光斑 / 链路曲线，以及配套的理论分析与使用说明——点进去即可开始仿真。
+  </p>
+  <div class="hero-actions">
+    <a class="btn primary" href="#modules">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      进入仿真模块
+    </a>
+    <a class="btn amber" href="docs/使用说明书.html">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM18 3h1a1 1 0 0 1 1 1v15" stroke-linecap="round"/></svg>
+      使用说明书
+    </a>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="stat-strip">
+    <div class="stat"><div class="v">6</div><div class="l">复现模块</div></div>
+    <div class="stat"><div class="v">512</div><div class="l">最大阵元数</div></div>
+    <div class="stat"><div class="v">15+</div><div class="l">交互仿真器</div></div>
+    <div class="stat"><div class="v">0</div><div class="l">依赖安装 / 纯浏览器</div></div>
+  </div>
+</div>
+
+<!-- ============ 模块卡片 ============ -->
+<section class="section" id="modules">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>六大仿真模块</h2>
+      <p>每个模块对应一篇核心文献，进入后通过顶部标签在「交互仿真 · 理论分析 · 使用说明」之间切换。</p>
+    </div>
+    <div class="grid mods">
+
+      <!-- M1 -->
+      <a class="mod-card" href="modules/module1-pat.html">
+        <div class="num">MODULE 01 · IEEE PHOTONICS J. 2025</div>
+        <h3>集成 OPA 的指向-捕获-跟踪（PAT）闭环系统</h3>
+        <div class="meta">Chen et al. · 512 单元硅基 OPA · 视场 5°×5°</div>
+        <p class="desc">复现相位控方位、波长控俯仰的二维扫描，REV 旋转电场矢量校准、四象限探测器测到达角，以及对抖动目标的闭环跟踪全过程。</p>
+        <div class="tags"><span class="tag cyan">REV 校准</span><span class="tag">QD 测角</span><span class="tag amber">闭环跟踪</span><span class="tag">PSLR</span></div>
+        <span class="go">开始仿真 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </a>
+
+      <!-- M2 -->
+      <a class="mod-card" href="modules/module2-multiwavelength.html">
+        <div class="num">MODULE 02 · APPL. PHYS. EXPRESS 2025</div>
+        <h3>多波长 OPA 菲涅耳反射相干波束合成</h3>
+        <div class="meta">Haraguchi et al. · 2 单元 · 3 波长 DWDM · 2.8 Gbps</div>
+        <p class="desc">复现多单元相干波束合成（CBC）方向图、PLL 锁相环相位噪声抑制、菲涅耳回波、BER-接收功率曲线与眼图。</p>
+        <div class="tags"><span class="tag cyan">相干合成</span><span class="tag magenta">PLL</span><span class="tag">DWDM</span><span class="tag amber">BER / 眼图</span></div>
+        <span class="go">开始仿真 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </a>
+
+      <!-- M3 -->
+      <a class="mod-card" href="modules/module3-deeplearning.html">
+        <div class="num">MODULE 03 · IEEE SIPHOTONICS 2024</div>
+        <h3>深度学习驱动的 OPA 相位校准</h3>
+        <div class="meta">Kim et al. · KAIST · 64 通道 · 串联 DNN</div>
+        <p class="desc">在浏览器内真实训练一个前向建模 + 逆向设计神经网络，学习「电压配置→远场波束」，并与爬山算法对比 SMSR。</p>
+        <div class="tags"><span class="tag cyan">前向/逆向网络</span><span class="tag magenta">浏览器内训练</span><span class="tag">SMSR</span></div>
+        <span class="go">开始仿真 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </a>
+
+      <!-- M4 -->
+      <a class="mod-card" href="modules/module4-monolithic.html">
+        <div class="num">MODULE 04 · J. LIGHTWAVE TECHNOL. 2024</div>
+        <h3>单片集成端射 OPA 光无线发射机</h3>
+        <div class="meta">Kim et al. · TWE-MZM + CMOS Driver + 1×64 OPA · 1310 nm</div>
+        <p class="desc">复现端射线阵横向波束转向与波束宽度理论、光栅天线纵向辐射与辐射效率热图，以及高速调制眼图。</p>
+        <div class="tags"><span class="tag cyan">波束宽度理论</span><span class="tag">光栅天线</span><span class="tag amber">辐射效率</span><span class="tag">SLSR</span></div>
+        <span class="go">开始仿真 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </a>
+
+      <!-- M5 -->
+      <a class="mod-card" href="modules/module5-algorithms.html">
+        <div class="num">MODULE 05 · OGC 2024</div>
+        <h3>OPA 波束转向相位控制算法优化</h3>
+        <div class="meta">Zhang et al. · 64 通道 · 水平 60° · 分辨率 0.3°</div>
+        <p class="desc">复现逐通道占空比爬山算法与遗传算法（Logistic 混沌初始化、选择/交叉/变异），实时对比收敛速度与波束质量。</p>
+        <div class="tags"><span class="tag cyan">爬山算法</span><span class="tag magenta">遗传算法</span><span class="tag amber">收敛对比</span></div>
+        <span class="go">开始仿真 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </a>
+
+      <!-- M6 -->
+      <a class="mod-card" href="modules/module6-highspeed.html">
+        <div class="num">MODULE 06 · IEEE TRANS. INSTRUM. MEAS. 2024</div>
+        <h3>OPA 高速扫描控制技术（FPGA + 电光 p-n 结）</h3>
+        <div class="meta">Wang et al. · 吉林大学 · 128 通道 · 配置 &lt; 5 μs</div>
+        <p class="desc">复现 FPGA 双端口 RAM + DAC 并行加载时序、电光 p-n 结高速角度切换、5×5 二维扫描帧时序，并对比电光/热光响应。</p>
+        <div class="tags"><span class="tag cyan">FPGA/DAC 时序</span><span class="tag magenta">电光调制</span><span class="tag amber">2D 扫描帧</span></div>
+        <span class="go">开始仿真 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 平台特点 / 技术栈 ============ -->
+<section class="section" style="padding-top:10px">
+  <div class="wrap">
+    <div class="section-head"><h2>平台特点与技术栈</h2><p>零安装、零后端，所有物理计算在浏览器本地实时完成。</p></div>
+    <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="panel"><h4><span class="dot"></span>真实物理内核</h4><p style="font-size:13.5px;color:var(--text-dN);color:var(--text-dim)">基于相控阵阵列因子、光栅方程、高斯光束传播与高斯噪声通信链路逐项数值求解，参数与公式均来自文献，结果可复现、可追溯。</p></div>
+      <div class="panel"><h4><span class="dot"></span>实时交互仿真</h4><p style="font-size:13.5px;color:var(--text-dim)">拖动滑块即刻重算方向图、光斑与链路曲线；算法类模块支持单步 / 自动迭代，直观呈现收敛与扫描过程。</p></div>
+      <div class="panel"><h4><span class="dot"></span>理论 + 实操闭环</h4><p style="font-size:13.5px;color:var(--text-dim)">每个模块配套 KaTeX 排版公式、参数表、分步使用说明与预期结果，先看理论再动手，适合教学与项目答辩演示。</p></div>
+      <div class="panel"><h4><span class="dot"></span>动态三维 · 8 种通信场景 <span class="tag cyan" style="margin-left:4px">NEW</span></h4><p style="font-size:13.5px;color:var(--text-dim)">Three.js 构建：5 类基础场景（直接协同 / 自由空间 / 有限空间 / 密集障碍 / 自动 Mesh 寻路）外加 3 个「指令驱动链式中继」场景（2 / 3 / 4 台 OPA 的两至四跳接力）。光束实时遮挡检测、遇障变红断链；中继场景按指令把信号经唯一可达的中继逐跳转发终端，实时显示距离 / 功率 / BER / 大气衰减，参数全部可调。</p></div>
+    </div>
+    <div class="note" style="margin-top:22px">
+      <strong>技术栈：</strong>原生 HTML5 + CSS3 + JavaScript（无框架、无构建）· ECharts 5（曲线/图表）· Canvas 2D（光斑/热图/眼图）· Three.js r128（动态三维场景 / 光束遮挡）· KaTeX（公式）· VS Code + Live Server 本地运行。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 快速开始 ============ -->
+<section class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head"><h2>三步快速开始</h2></div>
+    <div class="steps">
+      <div class="step-card"><div><h4>用 VS Code 打开项目文件夹</h4><p>将整个 <code>opa-fso-platform</code> 文件夹拖入 VS Code，安装推荐的「Live Server」扩展。</p></div></div>
+      <div class="step-card"><div><h4>启动本地服务器</h4><p>在 <code>index.html</code> 上右键选择「Open with Live Server」，或在终端运行 <code>python -m http.server 8000</code> 后访问 <code>http://localhost:8000</code>。</p></div></div>
+      <div class="step-card"><div><h4>选择模块开始仿真</h4><p>在首页点击任一模块卡片，默认进入「交互仿真」标签，调节左侧参数、点击运行即可；另两个标签提供理论分析与使用说明。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 页脚 ============ -->
+<footer class="footer">
+  <div class="frow">
+    <div>OPA-FSO 仿真平台 · 校创项目「基于 OPA 的空间光通信」文献复现</div>
+    <div>纯前端 · 本地运行 · 详见 <a href="docs/使用说明书.html">使用说明书</a> 与 <a href="docs/实现路径.html">实现路径</a></div>
+  </div>
+</footer>
+
+</body>
+</html>
