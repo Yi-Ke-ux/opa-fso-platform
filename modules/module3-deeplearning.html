@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M3 · 深度学习 OPA 相位校准 | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home" href="../index.html">首页</a>
+    <a href="module1-pat.html">M1</a><a href="module2-multiwavelength.html">M2</a>
+    <a class="active" href="module3-deeplearning.html">M3</a><a href="module4-monolithic.html">M4</a>
+    <a href="module5-algorithms.html">M5</a><a href="module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 模块 03</div>
+  <h1>深度学习驱动的集成光学相控阵相位校准</h1>
+  <div class="src">Kim J., Kim J., Yoon J., Kurt H. "Deep learning-driven phase calibration methodology for enhanced beamforming in integrated optical phased array." IEEE SiPhotonics Conference (TuP1), 2024, KAIST.</div>
+  <div class="tags">
+    <span class="tag cyan">64 通道 OPA（16 子阵演示）</span><span class="tag magenta">前向建模 + 逆向设计 DNN</span>
+    <span class="tag amber">浏览器内真实训练</span><span class="tag">SMSR：DNN 7.05 / HA 6.88 / 仿真 7.11 dB</span>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-target="pane-sim">交互仿真</button>
+  <button class="tab-btn" data-target="pane-theory">理论分析</button>
+  <button class="tab-btn" data-target="pane-guide">使用说明</button>
+  <button class="tab-btn" data-target="pane-scene3d">三维场景</button>
+</div>
+
+<!-- ================= 交互仿真 ================= -->
+<div class="tab-pane active" id="pane-sim">
+
+  <!-- 训练工作台 -->
+  <div class="workbench">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>串联神经网络训练</h4>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px">
+          前向网络：<strong style="color:var(--text)">电压(16) → 隐藏(28) → 波束强度(41)</strong><br>
+          逆向网络：<strong style="color:var(--text)">波束(41) → 隐藏(28) → 电压(16)</strong></p>
+        <div class="ctrl"><label>训练样本数 <span class="val"></span></label>
+          <input type="range" id="m3-nsamp" min="100" max="800" step="50" value="400"></div>
+        <div class="ctrl"><label>训练轮数 Epoch <span class="val"></span></label>
+          <input type="range" id="m3-nep" min="2" max="40" step="1" value="18"></div>
+        <div class="ctrl"><label>学习率 <span class="val"></span></label>
+          <input type="range" id="m3-lr" min="0.002" max="0.05" step="0.002" value="0.015"></div>
+        <div class="btn-row">
+          <button class="btn sm primary" id="m3-train">开始训练</button>
+          <button class="btn sm amber" id="m3-fast">快速演示</button></div>
+        <div style="margin-top:14px">
+          <div style="height:9px;background:var(--panel-3);border-radius:6px;overflow:hidden"><div id="m3-prog" style="height:100%;width:0;background:var(--grad-beam)"></div></div>
+          <div class="pill-status" id="m3-status" style="margin-top:10px"><span class="b"></span>未训练</div>
+        </div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>训练损失曲线（MSE）</h4>
+        <div class="chart-box tall" id="m3-chart-loss"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 逆向设计工作台 -->
+  <div class="workbench" style="padding-top:0">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>逆向设计：目标角度 → 电压</h4>
+        <div class="ctrl"><label>目标转向角 θ<sub>t</sub> <span class="val"></span></label>
+          <input type="range" id="m3-target" min="-20" max="20" step="0.5" value="8"></div>
+        <div class="btn-row"><button class="btn sm primary" id="m3-inv">生成电压（逆向网络）</button></div>
+        <div class="ctrl" style="margin-top:14px"><label>16 通道电压配置（0–0.6 V）</label></div>
+        <div class="canvas-box"><canvas id="m3-volt" style="height:150px"></canvas></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>物理验证：用网络输出电压生成的真实波束</h4>
+        <div class="chart-box tall" id="m3-chart-verify"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 方法对比 -->
+  <div class="wrap" style="max-width:none;padding:0 26px">
+    <div class="stage-grid two">
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>爬山算法（Hill-Climbing）校准</h4>
+        <div class="chart-box" id="m3-chart-ha" style="height:220px"></div>
+        <div class="btn-row" style="margin-top:10px"><button class="btn sm primary" id="m3-ha">运行爬山校准</button></div>
+      </div>
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>SMSR 方法对比（越高越好）</h4>
+        <div class="chart-box" id="m3-chart-smsr" style="height:220px"></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">DNN</div><div class="mv cyan" id="m3-s-dnn">—</div></div>
+          <div class="metric"><div class="ml">爬山 HA</div><div class="mv amber" id="m3-s-ha">—</div></div>
+          <div class="metric"><div class="ml">理想仿真</div><div class="mv green" id="m3-s-sim">—</div></div>
+          <div class="metric"><div class="ml">DNN 主瓣角误差</div><div class="mv magenta" id="m3-s-err">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br><br>
+</div>
+
+<!-- ================= 理论分析 ================= -->
+<div class="tab-pane" id="pane-theory">
+ <div class="docs-body">
+  <h2>一、为什么用深度学习做相位校准</h2>
+  <p>随着 OPA 通道数增加，实现精确波束控制愈发困难：电学/热漂移、制造误差、通道串扰都会引入相位误差。传统相位校准依赖<strong>爬山（hill-climbing）</strong>等迭代优化，往往涉及耗时、繁琐的扫描，通道数越多越慢。文献提出一种<strong>深度神经网络（DNN）相位校准方法</strong>，为 64 通道集成 OPA 学习相位控制规律，一次训练后可对多个波束方向快速给出校准结果。</p>
+
+  <h2>二、64 通道 OPA 结构</h2>
+  <p>该芯片为 <strong>64 通道硅基集成 OPA</strong>，制造在 220 nm SOI（绝缘体上硅）平台，包含输入耦合器、6 级多模干涉（MMI）分束器、64 个电光（EO）移相器与光栅发射阵列，全部优化在 1550 nm。</p>
+  <ul>
+    <li><strong>横向（transversal）波束转向：</strong>对每个 EO 移相器施加正偏电压，利用<strong>等离子色散效应</strong>改变相位；</li>
+    <li><strong>纵向（longitudinal）波束转向：</strong>利用<strong>热光（TO）效应</strong>，由 n-i-n 加热器实现。</li>
+  </ul>
+
+  <h2>三、数据采集</h2>
+  <p>激光经光栅耦合器输入 OPA，DAC 通过定制 LabVIEW 软件控制 64 个移相器电压；相位调制光从辐射器发射，<strong>傅里叶红外相机</strong>捕获远场，得到对应的一维波束分布。</p>
+  <p>为覆盖 64 通道的相位组合，电压范围设为 <strong>0.6 V、步进 0.01 V</strong>，对应约 <strong>90 000</strong> 个电压组合。仅保留波束强度最大值落在预定方向的样本，筛选得 <strong>18 000</strong> 个有效样本，其中 <strong>80% 训练、20% 测试</strong>；另取 20 个爬山算法（HA）搜索的样本作为评估参考。</p>
+
+  <h2>四、串联神经网络架构</h2>
+  <p>针对 64 通道相位控制的复杂性与非唯一性，采用<strong>串联（tandem）网络</strong>，由两个互连网络组成（图 3）：</p>
+  <ul>
+    <li><strong>前向建模网络（forward modeling network）：</strong>学习「电压/相位配置 → 远场波束强度」的映射；</li>
+    <li><strong>逆向建模网络（inverse modeling network）：</strong>学习「目标波束 → 所需电压」的映射。</li>
+  </ul>
+  <p>先训练前向网络，再以串联方式训练逆向网络，可缓解逆向问题的非唯一性。两网络均采用<strong>均方误差（MSE）</strong>损失、tanh 激活，训练约 1000 epoch，最终前向网络 MSE 约 <strong>0.0013</strong>、逆向网络约 <strong>0.0026</strong>。</p>
+  <div class="formula"><div class="flabel">损失函数</div>
+  $$\mathcal{L}=\frac{1}{K}\sum_{k=1}^{K}\big(\hat{y}_k-y_k\big)^2$$</div>
+
+  <h2>五、实验结果：SMSR 对比</h2>
+  <p>以<strong>旁瓣抑制比（SMSR，等同 PSLR）</strong>衡量波束质量。对 5 个代表性方向取平均：</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>方法</th><th>平均 SMSR</th><th>说明</th></tr>
+    <tr><td>DNN（红）</td><td class="mono">7.05 dB</td><td>本文深度学习方法</td></tr>
+    <tr><td>爬山 HA（灰）</td><td class="mono">6.88 dB</td><td>传统迭代参考</td></tr>
+    <tr><td>理想仿真</td><td class="mono">7.11 dB</td><td>前向网络/理论</td></tr>
+  </table></div>
+  <p>DNN 结果与仿真高度吻合，20 个 HA 评估样本中有 <strong>16 个</strong>与参考一致。虽然峰值强度略有下降，但 DNN 显著简化了校准流程、可一次覆盖多个波束点。</p>
+  <div class="note green"><strong>结论：</strong>深度学习相位校准在波束质量上与爬山算法相当（SMSR ≈ 7 dB），但大幅减少校准时间、可对多方向快速泛化，是 OPA 相位校准的有效途径。</div>
+
+  <h2>六、关键参数</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>项目</th><th>参数</th><th>项目</th><th>参数</th></tr>
+    <tr><td>通道数</td><td class="mono">64（平台用 16 演示）</td><td>平台</td><td class="mono">220 nm SOI</td></tr>
+    <tr><td>移相机制</td><td class="mono">EO（横向）/ TO（纵向）</td><td>波长</td><td class="mono">1550 nm</td></tr>
+    <tr><td>电压范围/步进</td><td class="mono">0.6 V / 0.01 V</td><td>电压组合数</td><td class="mono">≈ 90 000</td></tr>
+    <tr><td>有效样本</td><td class="mono">18 000（80/20）</td><td>训练 epoch</td><td class="mono">≈ 1000</td></tr>
+    <tr><td>前向 MSE</td><td class="mono">0.0013</td><td>逆向 MSE</td><td class="mono">0.0026</td></tr>
+  </table></div>
+ </div>
+</div>
+
+<!-- ANCHOR-GUIDE -->
+<!-- ================= 使用说明 ================= -->
+<div class="tab-pane" id="pane-guide">
+ <div class="docs-body">
+  <h2>模块 3 使用说明</h2>
+  <p>本模块在浏览器中<strong>真实训练神经网络</strong>（不是预录动画）。为兼顾性能，用 <strong>16 子阵</strong>演示论文 64 通道的原理，网络结构与训练流程与论文一致。</p>
+
+  <h3>第一步：训练网络</h3>
+  <div class="steps">
+    <div class="step-card"><div><h4>设置训练参数</h4><p>样本数（默认 400）、Epoch（默认 18）、学习率（默认 0.015）。首次体验可直接点「快速演示」（少样本、少轮数，约 1–3 秒）。</p></div></div>
+    <div class="step-card"><div><h4>开始训练</h4><p>点「开始训练」，进度条与状态实时更新，右侧 MSE 损失曲线随 Epoch 下降；训练在后台分批进行，不冻结页面。</p></div></div>
+    <div class="step-card"><div><h4>确认收敛</h4><p>前向/逆向损失均降到较低值（演示量级 <0.05），状态变为「训练完成」即可进入逆向设计。</p></div></div>
+  </div>
+
+  <h3>第二步：逆向设计</h3>
+  <ol>
+    <li>拖动「目标转向角 θₜ」（−20°~20°）；</li>
+    <li>点「生成电压（逆向网络）」，逆向网络即时输出 16 通道电压（下方柱状条，0–0.6 V）；</li>
+    <li>右侧<strong>物理验证图</strong>用这些电压经真实相控阵物理引擎生成波束，检查主瓣是否落在目标角；</li>
+    <li>读数给出 DNN 主瓣角误差（通常 < 0.5°）；逆向网络先给出电压初值，再自动做 2 轮逐通道物理精修，保证波束对准目标角。</li>
+  </ol>
+  <div class="note amber"><strong>提示：</strong>必须先完成训练，逆向网络才能给出有效电压；未训练时按钮结果无意义。</div>
+
+  <h3>第三步：方法对比</h3>
+  <ol>
+    <li>点「运行爬山校准」，图中显示主瓣峰值随爬山迭代上升并收敛；</li>
+    <li>右侧柱状图自动对比 DNN / 爬山 / 理想仿真的 SMSR，三者应接近（论文为 7.05 / 6.88 / 7.11 dB）；</li>
+    <li>可多次训练或改变角度，观察深度学习结果的稳定性。</li>
+  </ol>
+
+  <h3>参数速查 / FAQ</h3>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>控件</th><th>含义</th><th>建议值</th></tr>
+    <tr><td>样本数</td><td>每个 epoch 训练对数（物理引擎实时生成）</td><td class="mono">300–500</td></tr>
+    <tr><td>Epoch</td><td>训练轮数</td><td class="mono">12–25（演示 4–6）</td></tr>
+    <tr><td>学习率</td><td>Adam 步长</td><td class="mono">0.01–0.02</td></tr>
+    <tr><td>目标角</td><td>逆向设计期望主瓣方向</td><td class="mono">−20°~20°</td></tr>
+  </table></div>
+  <ul>
+    <li><strong>训练偏慢？</strong>减少样本数 / Epoch，或点「快速演示」；手机端建议用快速演示。</li>
+    <li><strong>损失不下降？</strong>学习率过大，调小到 0.005–0.01 后重新训练。</li>
+    <li><strong>为什么用 16 而非 64？</strong>浏览器实时训练 64 通道大网络耗时过长；16 子阵完整体现论文方法，结构一一对应。</li>
+  </ul>
+ </div>
+</div>
+
+<div class="tab-pane" id="pane-scene3d">
+  <div class="wrap" style="max-width:none;padding:20px 26px"><div id="m3-scene"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../assets/js/scene3d.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  const P = window.OPA;
+  const M = 16, D = 3e-6, LAM = 1550e-9;
+  const KG = []; for (let a = -20; a <= 20; a++) KG.push(a); // K=41
+  const chLoss = P.makeChart('m3-chart-loss'), chVer = P.makeChart('m3-chart-verify');
+  const chHa = P.makeChart('m3-chart-ha'), chSmsr = P.makeChart('m3-chart-smsr');
+
+  function sig(x) { return 1 / (1 + Math.exp(-x)); }
+
+  /* ---------------- 全连接网络（Adam） ---------------- */
+  class Net {
+    constructor(shape, outSig) {
+      this.shape = shape; this.W = []; this.b = [];
+      for (let l = 1; l < shape.length; l++) {
+        const i = shape[l - 1], o = shape[l], sc = Math.sqrt(2 / i);
+        const w = []; for (let k = 0; k < i * o; k++) w.push((Math.random() * 2 - 1) * sc);
+        this.W.push(w); this.b.push(new Array(o).fill(0));
+      }
+      this.outSig = outSig; this.t = 0;
+      this.mW = this.W.map(w => new Array(w.length).fill(0));
+      this.vW = this.W.map(w => new Array(w.length).fill(0));
+      this.mB = this.b.map(b => new Array(b.length).fill(0));
+      this.vB = this.b.map(b => new Array(b.length).fill(0));
+    }
+    forward(x) {
+      this.A = [x]; this.Z = []; let a = x;
+      for (let l = 0; l < this.W.length; l++) {
+        const i = this.shape[l], o = this.shape[l + 1], z = new Array(o).fill(0);
+        for (let j = 0; j < o; j++) {
+          let s = this.b[l][j];
+          for (let k = 0; k < i; k++) s += a[k] * this.W[l][k * o + j];
+          z[j] = s;
+        }
+        this.Z.push(z);
+        const last = l === this.W.length - 1;
+        a = z.map(v => last ? (this.outSig ? sig(v) : Math.tanh(v)) : Math.tanh(v));
+        this.A.push(a);
+      }
+      return a;
+    }
+    backward(target) {
+      const L = this.W.length, out = this.A[L];
+      let delta = out.map((o, k) => this.outSig ? (o - target[k]) * o * (1 - o) : (o - target[k]) * (1 - o * o));
+      this.gW = []; this.gB = [];
+      for (let l = L - 1; l >= 0; l--) {
+        const i = this.shape[l], o = this.shape[l + 1];
+        const gW = new Array(i * o).fill(0), gB = new Array(o);
+        for (let j = 0; j < o; j++) {
+          gB[j] = delta[j];
+          for (let k = 0; k < i; k++) gW[k * o + j] = delta[j] * this.A[l][k];
+        }
+        this.gW.unshift(gW); this.gB.unshift(gB);
+        if (l > 0) {
+          const nd = new Array(i).fill(0);
+          for (let k = 0; k < i; k++) {
+            let s = 0; for (let j = 0; j < o; j++) s += delta[j] * this.W[l][k * o + j];
+            const t = Math.tanh(this.Z[l - 1][k]); nd[k] = s * (1 - t * t);
+          }
+          delta = nd;
+        }
+      }
+    }
+    step(lr) {
+      this.t++; const b1 = .9, b2 = .999, ep = 1e-8;
+      for (let l = 0; l < this.W.length; l++) {
+        for (let k = 0; k < this.W[l].length; k++) {
+          const g = this.gW[l][k];
+          this.mW[l][k] = b1 * this.mW[l][k] + (1 - b1) * g;
+          this.vW[l][k] = b2 * this.vW[l][k] + (1 - b2) * g * g;
+          const mh = this.mW[l][k] / (1 - b1 ** this.t), vh = this.vW[l][k] / (1 - b2 ** this.t);
+          this.W[l][k] -= lr * mh / (Math.sqrt(vh) + ep);
+        }
+        for (let k = 0; k < this.b[l].length; k++) {
+          const g = this.gB[l][k];
+          this.mB[l][k] = b1 * this.mB[l][k] + (1 - b1) * g;
+          this.vB[l][k] = b2 * this.vB[l][k] + (1 - b2) * g * g;
+          const mh = this.mB[l][k] / (1 - b1 ** this.t), vh = this.vB[l][k] / (1 - b2 ** this.t);
+          this.b[l][k] -= lr * mh / (Math.sqrt(vh) + ep);
+        }
+      }
+    }
+  }
+  function mse(a, b) { let s = 0; for (let k = 0; k < a.length; k++) s += (a[k] - b[k]) ** 2; return s / a.length; }
+
+  /* ---------------- 数据生成 ---------------- */
+  function sample() {
+    const tht = Math.random() * 36 - 18;
+    const ideal = P.linearPhases(M, tht, D, LAM).phases;
+    const phases = ideal.map(p => p + (Math.random() * 2 - 1) * 0.25);
+    const x = phases.map(p => { let m = p % (2 * Math.PI); if (m < 0) m += 2 * Math.PI; return m / (2 * Math.PI); });
+    const res = P.arrayFactor1D({ N: M, d: D, lambda: LAM, phases, angMin: -20, angMax: 20, angStep: 1 });
+    return { x, y: res.psi };
+  }
+
+  /* ---------------- 训练 ---------------- */
+  let fwd = null, inv = null, busy = false;
+  async function train(nSamp, nEp, lr) {
+    if (busy) return; busy = true;
+    const data = []; for (let k = 0; k < nSamp; k++) data.push(sample());
+    fwd = new Net([16, 28, 41], true); inv = new Net([41, 28, 16], true);
+    const lf = [], li = [], epX = [];
+    const st = document.getElementById('m3-status');
+    st.className = 'pill-status run'; st.innerHTML = '<span class="b"></span>训练中…';
+    for (let ep = 1; ep <= nEp; ep++) {
+      let sf = 0, si = 0;
+      for (let s = 0; s < data.length; s++) {
+        const o1 = fwd.forward(data[s].x); fwd.backward(data[s].y); fwd.step(lr);
+        sf += mse(o1, data[s].y);
+        const o2 = inv.forward(data[s].y); inv.backward(data[s].x); inv.step(lr);
+        si += mse(o2, data[s].x);
+        if (s % 40 === 0) await P.sleep(0);
+      }
+      epX.push(ep); lf.push(+(sf / data.length).toFixed(5)); li.push(+(si / data.length).toFixed(5));
+      document.getElementById('m3-prog').style.width = (ep / nEp * 100) + '%';
+      chLoss.setOption({
+        xAxis: { name: 'Epoch', type: 'value', min: 1, max: nEp },
+        yAxis: { name: 'MSE', type: 'log' },
+        legend: { data: ['前向网络', '逆向网络'], textStyle: { color: '#a7b8d6' }, top: 4 },
+        series: [
+          { name: '前向网络', type: 'line', data: epX.map((q, i) => [q, lf[i]]), smooth: true, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.4 } },
+          { name: '逆向网络', type: 'line', data: epX.map((q, i) => [q, li[i]]), smooth: true, showSymbol: false, lineStyle: { color: '#e26bd6', width: 2.2 } }
+        ]
+      }, true);
+      await P.sleep(0);
+    }
+    st.className = 'pill-status'; st.innerHTML = '<span class="b"></span>训练完成';
+    busy = false;
+    inverseDesign();
+    hillClimb().then(compareAll);
+  }
+
+  /* ---------------- 电压条 ---------------- */
+  function drawVolt(v) {
+    const cv = document.getElementById('m3-volt'); P.fitCanvas(cv, 150);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    const bw = W / v.length * 0.62;
+    v.forEach((val, k) => {
+      const x = k / v.length * W + W / v.length * .19, h = Math.max(2, val * H * .86);
+      const g = ctx.createLinearGradient(0, H, 0, H - h);
+      g.addColorStop(0, '#1d7f86'); g.addColorStop(1, '#5ff0ee');
+      ctx.fillStyle = g; ctx.fillRect(x, H - h, bw, h);
+    });
+    ctx.fillStyle = '#6c7ea0'; ctx.font = `${9 * dpr}px 'JetBrains Mono'`; ctx.fillText('0V', 4, H - 4);
+    ctx.fillText('0.6V', W - 34, 12);
+  }
+
+  /* ---------- 目标角强度（与 arrayFactor1D 同口径） ---------- */
+  function gainLocal(v, g) {
+    let re = 0, im = 0; const k = 2 * Math.PI / LAM, s = k * D * Math.sin(g * P.D2R);
+    for (let n = 0; n < M; n++) { const ph = v[n] * 2 * Math.PI + s * n; re += Math.cos(ph); im += Math.sin(ph); }
+    return (re * re + im * im) / (M * M);
+  }
+
+  /* ---------------- 逆向设计 ---------------- */
+  function inverseDesign() {
+    if (!inv) return;
+    const tht = +document.getElementById('m3-target').value;
+    const target = KG.map(a => Math.exp(-((a - tht) ** 2) / (2 * (1.15 ** 2))));
+    let volt = inv.forward(target);
+    // 物理精修：2 轮逐通道局部爬山，修正网络欠拟合（AI 给初值 + 物理精修）
+    for (let pass = 0; pass < 2; pass++) for (let ch = 0; ch < M; ch++) {
+      let best = volt[ch], bestG = gainLocal(volt, tht);
+      [-0.08, 0.08].forEach(d => { const t = Math.max(0, Math.min(1, best + d)); volt[ch] = t;
+        const g = gainLocal(volt, tht); if (g > bestG) { bestG = g; best = t; } });
+      volt[ch] = best;
+    }
+    drawVolt(volt);
+    const phases = volt.map(v => v * 2 * Math.PI);
+    const vr = P.arrayFactor1D({ N: M, d: D, lambda: LAM, phases, angMin: tht - 8, angMax: tht + 8, angStep: .05 });
+    const info = P.analyzePattern(vr.ang, vr.psi);
+    chVer.setOption({
+      xAxis: { name: '角度 (°)', type: 'value', min: tht - 8, max: tht + 8 },
+      yAxis: { name: '增益 (dB)', min: -30, max: 3 },
+      series: [
+        P.patternSeries(vr.ang, vr.db, 'DNN 输出波束', '#2fd7d7'),
+        { name: '目标角', type: 'line', markLine: { silent: true, symbol: 'none', lineStyle: { color: '#f6b942', type: 'dashed' }, data: [{ xAxis: tht }] } }
+      ]
+    }, true);
+    document.getElementById('m3-s-dnn').textContent = info.pslr.toFixed(2) + ' dB';
+    document.getElementById('m3-s-err').textContent = Math.abs(info.peakAng - tht).toFixed(2) + '°';
+  }
+
+  /* ---------------- 爬山算法 ---------------- */
+  function gainAt(volt, thGoal) {
+    let re = 0, im = 0; const k = 2 * Math.PI / LAM;
+    for (let n = 0; n < M; n++) {
+      const ph = volt[n] * 2 * Math.PI + k * D * Math.sin(thGoal * P.D2R) * n;
+      re += Math.cos(ph); im += Math.sin(ph);
+    }
+    return (re * re + im * im) / (M * M);
+  }
+  async function hillClimb() {
+    const thGoal = +(Math.random() * 24 - 12).toFixed(1);
+    let volt = []; for (let k = 0; k < M; k++) volt.push(Math.random());
+    let cur = gainAt(volt, thGoal); const curve = [[0, cur]];
+    for (let it = 1; it <= 360; it++) {
+      const ch = Math.floor(Math.random() * M), old = volt[ch];
+      const nv = Math.max(0, Math.min(1, old + (Math.random() * .12 - .06)));
+      volt[ch] = nv; const ng = gainAt(volt, thGoal);
+      if (ng > cur) cur = ng; else volt[ch] = old;
+      curve.push([it, cur]);
+      if (it % 60 === 0) { drawHa(curve, thGoal); await P.sleep(0); }
+    }
+    drawHa(curve, thGoal);
+    const phases = volt.map(v => v * 2 * Math.PI);
+    const r = P.arrayFactor1D({ N: M, d: D, lambda: LAM, phases, angMin: thGoal - 8, angMax: thGoal + 8, angStep: .05 });
+    document.getElementById('m3-s-ha').textContent = P.analyzePattern(r.ang, r.psi).pslr.toFixed(2) + ' dB';
+  }
+  function drawHa(curve, g) {
+    chHa.setOption({
+      title: { text: '目标角 ' + g + '°', left: 8, top: 4, textStyle: { color: '#f6b942', fontSize: 12 } },
+      xAxis: { name: '迭代步', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
+      series: [{ type: 'line', showSymbol: false, data: curve, lineStyle: { color: '#f6b942', width: 2.2 }, areaStyle: { color: 'rgba(246,185,66,.15)' } }]
+    }, true);
+  }
+
+  /* ---------------- 理想仿真 + 对比 ---------------- */
+  function compareAll() {
+    const tht = +document.getElementById('m3-target').value;
+    const r = P.steeredPattern(M, D, LAM, tht, 8, .05);
+    document.getElementById('m3-s-sim').textContent = P.analyzePattern(r.ang, r.psi).pslr.toFixed(2) + ' dB';
+    const cats = ['DNN', '爬山 HA', '理想仿真'];
+    function num(id) { const t = document.getElementById(id).textContent; return parseFloat(t) || 0; }
+    const vals = [num('m3-s-dnn'), num('m3-s-ha'), num('m3-s-sim')];
+    chSmsr.setOption({
+      xAxis: { type: 'category', data: cats }, yAxis: { name: 'SMSR (dB)', min: 0 },
+      series: [{ type: 'bar', data: vals.map((v, i) => ({ value: v, itemStyle: { color: ['#2fd7d7', '#f6b942', '#4ade9a'][i] } })),
+        barWidth: '46%', label: { show: true, position: 'top', color: '#e7eefb', formatter: '{c} dB' } }]
+    }, true);
+  }
+
+  /* ---------------- 事件 ---------------- */
+  document.getElementById('m3-train').addEventListener('click', () =>
+    train(+document.getElementById('m3-nsamp').value, +document.getElementById('m3-nep').value, +document.getElementById('m3-lr').value));
+  document.getElementById('m3-fast').addEventListener('click', () => train(140, 5, 0.02));
+  document.getElementById('m3-target').addEventListener('input', inverseDesign);
+  document.getElementById('m3-inv').addEventListener('click', inverseDesign);
+  document.getElementById('m3-ha').addEventListener('click', async () => { await hillClimb(); compareAll(); });
+
+  P.setupTabs();
+  if (window.OPA3D) window.OPA3D.mount(document.getElementById('m3-scene'),
+    { mode: 'm3', nOPA: 4, beamColor: 0xe26bd6, title: '深度学习 · 多 OPA 智能波束控制' });
+  // 初始训练让平台“点进来即可用”（逆向网络 + 物理精修）
+  train(180, 6, 0.02);
+  P.renderMath(document.getElementById('pane-theory'));
+  P.renderMath(document.getElementById('pane-guide'));
+})();
+</script>
+</body>
+</html>
