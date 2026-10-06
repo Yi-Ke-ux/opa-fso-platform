@@ -227,7 +227,7 @@
   /* ============================================================
      七、可视化：ECharts 深色封装
      ============================================================ */
-  const ECHART_TEXT = '#a7b8d6', ECHART_AXIS = '#253355';
+  const ECHART_TEXT = '#505f7b', ECHART_AXIS = '#d3dbe6';
   function makeChart(idOrEl) {
     const el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
     const ch = echarts.init(el, null, { renderer: 'canvas' });
@@ -236,8 +236,8 @@
       textStyle: { fontFamily: "'Noto Sans SC',sans-serif", color: ECHART_TEXT },
       grid: { left: 62, right: 24, top: 48, bottom: 52 },
       tooltip: { backgroundColor: 'rgba(12,18,32,.94)', borderColor: '#2a3a5e', textStyle: { color: '#e7eefb', fontSize: 12 } },
-      xAxis: { axisLine: { lineStyle: { color: ECHART_AXIS } }, axisLabel: { color: ECHART_TEXT }, splitLine: { lineStyle: { color: 'rgba(37,51,85,.5)' } }, nameTextStyle: { color: ECHART_TEXT } },
-      yAxis: { axisLine: { lineStyle: { color: ECHART_AXIS } }, axisLabel: { color: ECHART_TEXT }, splitLine: { lineStyle: { color: 'rgba(37,51,85,.5)' } }, nameTextStyle: { color: ECHART_TEXT } }
+      xAxis: { axisLine: { lineStyle: { color: ECHART_AXIS } }, axisLabel: { color: ECHART_TEXT }, splitLine: { lineStyle: { color: 'rgba(31,45,80,.08)' } }, nameTextStyle: { color: ECHART_TEXT } },
+      yAxis: { axisLine: { lineStyle: { color: ECHART_AXIS } }, axisLabel: { color: ECHART_TEXT }, splitLine: { lineStyle: { color: 'rgba(31,45,80,.08)' } }, nameTextStyle: { color: ECHART_TEXT } }
     };
     ch._base = base;
     window.addEventListener('resize', () => ch.resize());
@@ -247,8 +247,8 @@
   function patternSeries(ang, db, name, color) {
     return {
       name: name || '方向图', type: 'line', data: ang.map((a, i) => [a, db[i]]),
-      showSymbol: false, smooth: false, lineStyle: { width: 2, color: color || '#2fd7d7' },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(47,215,215,.28)' }, { offset: 1, color: 'rgba(47,215,215,0)' }] } },
+      showSymbol: false, smooth: false, lineStyle: { width: 2.4, color: color || '#0c8fa0' },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(12,143,160,.22)' }, { offset: 1, color: 'rgba(12,143,160,0)' }] } },
       animationDuration: 400
     };
   }
