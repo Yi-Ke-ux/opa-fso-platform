@@ -13,7 +13,7 @@
 
 <header class="topbar">
   <a class="brand" href="../index.html">
-    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#0c8fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
     <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
   </a>
   <nav class="topnav">
@@ -411,7 +411,7 @@
     chAz.setOption({
       xAxis: { name: '方位角 φ (°)', type: 'value', min: x.az - 1.6, max: x.az + 1.6 },
       yAxis: { name: '增益 (dB)', min: -40, max: 3 },
-      series: [P.patternSeries(az.ang, az.db, '方位方向图', '#2fd7d7')]
+      series: [P.patternSeries(az.ang, az.db, '方位方向图', '#0c8fa0')]
     }, true);
 
     // 俯仰（光栅纵向，窄高斯主瓣，HPBW≈0.07）
@@ -424,7 +424,7 @@
     chEl.setOption({
       xAxis: { name: '俯仰角 θ (°)', type: 'value', min: lo, max: hi },
       yAxis: { name: '增益 (dB)', min: -45, max: 3 },
-      series: [P.patternSeries(angE, dbE, '俯仰方向图', '#e26bd6')]
+      series: [P.patternSeries(angE, dbE, '俯仰方向图', '#bd24cf')]
     }, true);
 
     // 读数
@@ -466,8 +466,8 @@
       xAxis: { name: '通道附加相位 (°)', type: 'value', min: 0, max: 360 },
       yAxis: { name: '合束功率', type: 'value' },
       series: [
-        { name: '功率', type: 'line', showSymbol: false, data: ph.map((q, i) => [q, pw[i]]), lineStyle: { color: '#4aa8ff', width: 2 }, smooth: true },
-        { name: '当前', type: 'scatter', data: [[revPhi * 180 / Math.PI, cur]], symbolSize: 13, itemStyle: { color: '#f6b942' } }
+        { name: '功率', type: 'line', showSymbol: false, data: ph.map((q, i) => [q, pw[i]]), lineStyle: { color: '#2f7cf6', width: 2 }, smooth: true },
+        { name: '当前', type: 'scatter', data: [[revPhi * 180 / Math.PI, cur]], symbolSize: 13, itemStyle: { color: '#d98a13' } }
       ]
     }, true);
   }
@@ -603,9 +603,9 @@
       xAxis: { name: '时间 (μs)', type: 'value', min: 0, max: 130 },
       yAxis: { name: '归一化功率', min: 0, max: 1.08 },
       series: [
-        { name: '波长维 45.45μs', type: 'line', showSymbol: false, smooth: true, data: t.map((q, i) => [q, y1[i]]), lineStyle: { color: '#2fd7d7', width: 2 },
-          markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(246,185,66,.6)', type: 'dashed' }, data: [{ yAxis: .1 }, { yAxis: .9 }] } },
-        { name: '相位维 59.69μs', type: 'line', showSymbol: false, smooth: true, data: t.map((q, i) => [q, y2[i]]), lineStyle: { color: '#e26bd6', width: 2 } }
+        { name: '波长维 45.45μs', type: 'line', showSymbol: false, smooth: true, data: t.map((q, i) => [q, y1[i]]), lineStyle: { color: '#0c8fa0', width: 2 },
+          markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(217,138,19,.6)', type: 'dashed' }, data: [{ yAxis: .1 }, { yAxis: .9 }] } },
+        { name: '相位维 59.69μs', type: 'line', showSymbol: false, smooth: true, data: t.map((q, i) => [q, y2[i]]), lineStyle: { color: '#bd24cf', width: 2 } }
       ]
     }, true);
   }
