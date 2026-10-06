@@ -13,7 +13,7 @@
 
 <header class="topbar">
   <a class="brand" href="../index.html">
-    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#0c8fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
     <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
   </a>
   <nav class="topnav">
@@ -255,7 +255,7 @@
     chPat.setOption({
       xAxis: { name: '横向角 (°)', type: 'value', min: x.steer - 2, max: x.steer + 2 },
       yAxis: { name: '增益 (dB)', min: -35, max: 3 },
-      series: [P.patternSeries(r.ang, r.db, '横向', '#2fd7d7')]
+      series: [P.patternSeries(r.ang, r.db, '横向', '#0c8fa0')]
     }, true);
     document.getElementById('m4-r-steer').textContent = a.peakAng.toFixed(2) + '°';
     document.getElementById('m4-r-hpbw').textContent = P.hpbwUniform(x.lam, x.N, x.d).toFixed(3) + '°';
@@ -273,8 +273,8 @@
       yAxis: { name: 'HPBW (°)', type: 'value' },
       series: [{
         type: 'line', data: Ns.map((q, i) => [q, V[i]]), showSymbol: false, smooth: true,
-        lineStyle: { color: '#2fd7d7', width: 2.4 }, areaStyle: { color: 'rgba(47,215,215,.13)' },
-        markPoint: { symbolSize: 46, label: { fontSize: 10 }, data: [{ coord: [64, P.hpbwUniform(1310e-9, 64, d)], value: 'N=64', itemStyle: { color: '#f6b942' } }] }
+        lineStyle: { color: '#0c8fa0', width: 2.4 }, areaStyle: { color: 'rgba(12,143,160,.13)' },
+        markPoint: { symbolSize: 46, label: { fontSize: 10 }, data: [{ coord: [64, P.hpbwUniform(1310e-9, 64, d)], value: 'N=64', itemStyle: { color: '#d98a13' } }] }
       }]
     }, true);
   }
@@ -293,7 +293,7 @@
     chLong.setOption({
       xAxis: { name: '波长 (nm)', type: 'value', min: 1285, max: 1335 },
       yAxis: { name: '纵向角 (°)', type: 'value' },
-      series: [{ type: 'line', data: wl.map((q, i) => [q, ang[i]]), showSymbol: false, smooth: true, lineStyle: { color: '#e26bd6', width: 2.4 } }]
+      series: [{ type: 'line', data: wl.map((q, i) => [q, ang[i]]), showSymbol: false, smooth: true, lineStyle: { color: '#bd24cf', width: 2.4 } }]
     }, true);
   }
 
