@@ -13,7 +13,7 @@
 
 <header class="topbar">
   <a class="brand" href="../index.html">
-    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#0c8fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
     <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
   </a>
   <nav class="topnav">
@@ -279,7 +279,7 @@
     chCbc.setOption({
       xAxis: { name: '角度 θ (mrad)', type: 'value', min: +(ang0 - range).toFixed(1), max: +(ang0 + range).toFixed(1) },
       yAxis: { name: '归一化增益 (dB)', min: -40, max: 3 },
-      series: [P.patternSeries(ang, pw, 'CBC 方向图', '#2fd7d7')]
+      series: [P.patternSeries(ang, pw, 'CBC 方向图', '#0c8fa0')]
     }, true);
 
     // CBC 效率
@@ -311,10 +311,10 @@
     chPn.setOption({
       xAxis: { name: '偏移频率 (Hz)', type: 'log' },
       yAxis: { name: '相位噪声 (dBc/Hz)', min: -130, max: -55 },
-      legend: { data: ['开环 VCO', '闭环 PLL'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      legend: { data: ['开环 VCO', '闭环 PLL'], textStyle: { color: '#505f7b' }, top: 4 },
       series: [
-        { name: '开环 VCO', type: 'line', showSymbol: false, data: f.map((q, i) => [q, po[i]]), lineStyle: { color: '#e26bd6', width: 2 } },
-        { name: '闭环 PLL', type: 'line', showSymbol: false, data: f.map((q, i) => [q, pc[i]]), lineStyle: { color: '#2fd7d7', width: 2.4 } }
+        { name: '开环 VCO', type: 'line', showSymbol: false, data: f.map((q, i) => [q, po[i]]), lineStyle: { color: '#bd24cf', width: 2 } },
+        { name: '闭环 PLL', type: 'line', showSymbol: false, data: f.map((q, i) => [q, pc[i]]), lineStyle: { color: '#0c8fa0', width: 2.4 } }
       ]
     }, true);
   }
@@ -363,10 +363,10 @@
     chBer.setOption({
       xAxis: { name: '接收功率 (dBm)', type: 'value', min: -41, max: -34 },
       yAxis: { name: 'BER', type: 'log', min: 1e-9, max: 1e-1 },
-      legend: { data: ['单阵元', '双阵元(平均口径)'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      legend: { data: ['单阵元', '双阵元(平均口径)'], textStyle: { color: '#505f7b' }, top: 4 },
       series: [
-        { name: '单阵元', type: 'line', showSymbol: false, data: s1.P.map((q, i) => [q, s1.B[i]]), lineStyle: { color: '#4aa8ff', width: 2.2 } },
-        { name: '双阵元(平均口径)', type: 'line', showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2, type: 'dashed' },
+        { name: '单阵元', type: 'line', showSymbol: false, data: s1.P.map((q, i) => [q, s1.B[i]]), lineStyle: { color: '#2f7cf6', width: 2.2 } },
+        { name: '双阵元(平均口径)', type: 'line', showSymbol: false, lineStyle: { color: '#0c8fa0', width: 2, type: 'dashed' },
           data: s1.P.map((q, i) => [q, Math.max(1e-10, s1.B[i] * 0.92)]) }
       ]
     }, true);
