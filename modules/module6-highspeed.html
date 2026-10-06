@@ -13,7 +13,7 @@
 
 <header class="topbar">
   <a class="brand" href="../index.html">
-    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#0c8fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
     <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
   </a>
   <nav class="topnav">
@@ -282,7 +282,7 @@
     const ph = P.linearPhases(c.N, c.thx, c.d, LAM0 * 1e-9).phases;
     const r = P.arrayFactor1D({ N: c.N, d: c.d, lambda: LAM0 * 1e-9, phases: ph, angMin: c.thx - 2, angMax: c.thx + 2, angStep: .02 });
     chX.setOption({ xAxis: { name: 'θx (°)', type: 'value', min: c.thx - 2, max: c.thx + 2 }, yAxis: { name: '增益 (dB)', min: -35, max: 3 },
-      series: [P.patternSeries(r.ang, r.db, '横向', '#2fd7d7')] }, true);
+      series: [P.patternSeries(r.ang, r.db, '横向', '#0c8fa0')] }, true);
     document.getElementById('m6-r-L').textContent = (LAM0 * 1e-9 / 1e-4 * 1e3).toFixed(1) + ' mm';
   }
 
@@ -297,10 +297,10 @@
     chTbl.setOption({
       xAxis: { name: '主瓣角 (°)', type: 'category', data: ang },
       yAxis: [{ name: 'FWHM (°)', min: .25, max: .36 }, { name: 'SLSR (dB)', min: 5, max: 12 }],
-      legend: { data: ['FWHM', 'SLSR'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      legend: { data: ['FWHM', 'SLSR'], textStyle: { color: '#505f7b' }, top: 4 },
       series: [
-        { name: 'FWHM', type: 'bar', data: fw, itemStyle: { color: '#2fd7d7' }, barWidth: '40%' },
-        { name: 'SLSR', type: 'line', yAxisIndex: 1, data: sl, itemStyle: { color: '#f6b942' }, lineStyle: { color: '#f6b942' } }
+        { name: 'FWHM', type: 'bar', data: fw, itemStyle: { color: '#0c8fa0' }, barWidth: '40%' },
+        { name: 'SLSR', type: 'line', yAxisIndex: 1, data: sl, itemStyle: { color: '#d98a13' }, lineStyle: { color: '#d98a13' } }
       ]
     }, true);
   }
@@ -320,12 +320,12 @@
     chTime.setOption({
       xAxis: { name: '时间 (μs)', type: 'value', min: 0, max: 5 },
       yAxis: { type: 'value', show: false, min: 0, max: 1.4 },
-      legend: { data: ['RAM 读', 'DAC 输出', '相位稳定'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      legend: { data: ['RAM 读', 'DAC 输出', '相位稳定'], textStyle: { color: '#505f7b' }, top: 4 },
       series: [
         { name: 'RAM 读', type: 'line', step: 'middle', data: t.map((q, i) => [q, ram[i] * 1.2]), showSymbol: false, lineStyle: { color: '#7aa2ff', width: 1.8 } },
-        { name: 'DAC 输出', type: 'line', data: t.map((q, i) => [q, dac[i]]), showSymbol: false, lineStyle: { color: '#f6b942', width: 2 } },
-        { name: '相位稳定', type: 'line', data: t.map((q, i) => [q, phi[i]]), showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 },
-          markLine: { silent: true, symbol: 'none', lineStyle: { color: '#e26bd6', type: 'dashed' }, data: [{ xAxis: 4.5, label: { formatter: '<5 μs', color: '#e26bd6' } }] } }
+        { name: 'DAC 输出', type: 'line', data: t.map((q, i) => [q, dac[i]]), showSymbol: false, lineStyle: { color: '#d98a13', width: 2 } },
+        { name: '相位稳定', type: 'line', data: t.map((q, i) => [q, phi[i]]), showSymbol: false, lineStyle: { color: '#0c8fa0', width: 2.2 },
+          markLine: { silent: true, symbol: 'none', lineStyle: { color: '#bd24cf', type: 'dashed' }, data: [{ xAxis: 4.5, label: { formatter: '<5 μs', color: '#bd24cf' } }] } }
       ]
     }, true);
   }
@@ -359,8 +359,8 @@
       X.push(k); Y.push(+Math.min(.999, v).toFixed(4));
     }
     chSpgd.setOption({ xAxis: { name: 'SPGD 迭代', type: 'value' }, yAxis: { name: '余弦相似度', min: .5, max: 1 },
-      series: [{ type: 'line', showSymbol: false, data: X.map((q, i) => [q, Y[i]]), lineStyle: { color: '#e26bd6', width: 2.2 },
-        areaStyle: { color: 'rgba(226,107,214,.13)' }, markLine: { silent: true, symbol: 'none', lineStyle: { color: '#4ade9a', type: 'dashed' }, data: [{ yAxis: .99 }] } }] }, true);
+      series: [{ type: 'line', showSymbol: false, data: X.map((q, i) => [q, Y[i]]), lineStyle: { color: '#bd24cf', width: 2.2 },
+        areaStyle: { color: 'rgba(189,36,207,.13)' }, markLine: { silent: true, symbol: 'none', lineStyle: { color: '#159f48', type: 'dashed' }, data: [{ yAxis: .99 }] } }] }, true);
   }
 
   /* ---------- 速度对比 ---------- */
@@ -369,8 +369,8 @@
       xAxis: { type: 'category', data: ['电光 p-n', '热光 TO'] },
       yAxis: { name: '配置时间 (μs)', type: 'log' },
       series: [{ type: 'bar', barWidth: '46%',
-        data: [{ value: 5, itemStyle: { color: '#2fd7d7' } }, { value: 200000, itemStyle: { color: '#f6b942' } }],
-        label: { show: true, position: 'top', color: '#e7eefb', formatter: (p) => p.dataIndex ? '200 ms' : '5 μs' } }]
+        data: [{ value: 5, itemStyle: { color: '#0c8fa0' } }, { value: 200000, itemStyle: { color: '#d98a13' } }],
+        label: { show: true, position: 'top', color: '#1a2540', formatter: (p) => p.dataIndex ? '200 ms' : '5 μs' } }]
     }, true);
   }
 
