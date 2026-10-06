@@ -13,7 +13,7 @@
 
 <header class="topbar">
   <a class="brand" href="../index.html">
-    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#0c8fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
     <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
   </a>
   <nav class="topnav">
@@ -343,10 +343,10 @@
       chLoss.setOption({
         xAxis: { name: 'Epoch', type: 'value', min: 1, max: nEp },
         yAxis: { name: 'MSE', type: 'log' },
-        legend: { data: ['前向网络', '逆向网络'], textStyle: { color: '#a7b8d6' }, top: 4 },
+        legend: { data: ['前向网络', '逆向网络'], textStyle: { color: '#505f7b' }, top: 4 },
         series: [
-          { name: '前向网络', type: 'line', data: epX.map((q, i) => [q, lf[i]]), smooth: true, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.4 } },
-          { name: '逆向网络', type: 'line', data: epX.map((q, i) => [q, li[i]]), smooth: true, showSymbol: false, lineStyle: { color: '#e26bd6', width: 2.2 } }
+          { name: '前向网络', type: 'line', data: epX.map((q, i) => [q, lf[i]]), smooth: true, showSymbol: false, lineStyle: { color: '#0c8fa0', width: 2.4 } },
+          { name: '逆向网络', type: 'line', data: epX.map((q, i) => [q, li[i]]), smooth: true, showSymbol: false, lineStyle: { color: '#bd24cf', width: 2.2 } }
         ]
       }, true);
       await P.sleep(0);
@@ -401,8 +401,8 @@
       xAxis: { name: '角度 (°)', type: 'value', min: tht - 8, max: tht + 8 },
       yAxis: { name: '增益 (dB)', min: -30, max: 3 },
       series: [
-        P.patternSeries(vr.ang, vr.db, 'DNN 输出波束', '#2fd7d7'),
-        { name: '目标角', type: 'line', markLine: { silent: true, symbol: 'none', lineStyle: { color: '#f6b942', type: 'dashed' }, data: [{ xAxis: tht }] } }
+        P.patternSeries(vr.ang, vr.db, 'DNN 输出波束', '#0c8fa0'),
+        { name: '目标角', type: 'line', markLine: { silent: true, symbol: 'none', lineStyle: { color: '#d98a13', type: 'dashed' }, data: [{ xAxis: tht }] } }
       ]
     }, true);
     document.getElementById('m3-s-dnn').textContent = info.pslr.toFixed(2) + ' dB';
@@ -437,9 +437,9 @@
   }
   function drawHa(curve, g) {
     chHa.setOption({
-      title: { text: '目标角 ' + g + '°', left: 8, top: 4, textStyle: { color: '#f6b942', fontSize: 12 } },
+      title: { text: '目标角 ' + g + '°', left: 8, top: 4, textStyle: { color: '#d98a13', fontSize: 12 } },
       xAxis: { name: '迭代步', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
-      series: [{ type: 'line', showSymbol: false, data: curve, lineStyle: { color: '#f6b942', width: 2.2 }, areaStyle: { color: 'rgba(246,185,66,.15)' } }]
+      series: [{ type: 'line', showSymbol: false, data: curve, lineStyle: { color: '#d98a13', width: 2.2 }, areaStyle: { color: 'rgba(217,138,19,.15)' } }]
     }, true);
   }
 
@@ -453,8 +453,8 @@
     const vals = [num('m3-s-dnn'), num('m3-s-ha'), num('m3-s-sim')];
     chSmsr.setOption({
       xAxis: { type: 'category', data: cats }, yAxis: { name: 'SMSR (dB)', min: 0 },
-      series: [{ type: 'bar', data: vals.map((v, i) => ({ value: v, itemStyle: { color: ['#2fd7d7', '#f6b942', '#4ade9a'][i] } })),
-        barWidth: '46%', label: { show: true, position: 'top', color: '#e7eefb', formatter: '{c} dB' } }]
+      series: [{ type: 'bar', data: vals.map((v, i) => ({ value: v, itemStyle: { color: ['#0c8fa0', '#d98a13', '#159f48'][i] } })),
+        barWidth: '46%', label: { show: true, position: 'top', color: '#1a2540', formatter: '{c} dB' } }]
     }, true);
   }
 
