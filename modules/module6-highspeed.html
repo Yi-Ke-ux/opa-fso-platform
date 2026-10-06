@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M6 · 高速二维扫描控制 | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home" href="../index.html">首页</a>
+    <a href="module1-pat.html">M1</a><a href="module2-multiwavelength.html">M2</a>
+    <a href="module3-deeplearning.html">M3</a><a href="module4-monolithic.html">M4</a>
+    <a href="module5-algorithms.html">M5</a><a class="active" href="module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 模块 06</div>
+  <h1>光学相控阵的高速二维波束扫描控制</h1>
+  <div class="src">Li S., et al. "High-Speed Two-Dimensional Beam Steering Control for Optical Phased Array." <em>IEEE Transactions on Instrumentation and Measurement</em>, Vol.73, Art.7030910, 2024.</div>
+  <div class="tags">
+    <span class="tag cyan">128 通道 2D 电光 OPA</span><span class="tag">反偏 p-n 结 · 载流子色散</span>
+    <span class="tag amber">FPGA + 双端口 RAM + DAC</span><span class="tag magenta">相位配置 &lt; 5 μs</span>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-target="pane-sim">交互仿真</button>
+  <button class="tab-btn" data-target="pane-theory">理论分析</button>
+  <button class="tab-btn" data-target="pane-guide">使用说明</button>
+  <button class="tab-btn" data-target="pane-scene3d">三维场景</button>
+</div>
+
+<!-- ================= 交互仿真 ================= -->
+<div class="tab-pane active" id="pane-sim">
+
+  <div class="workbench">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>电光 OPA 参数</h4>
+        <div class="ctrl"><label>阵元数 N <span class="val"></span></label>
+          <select id="m6-N"><option>64</option><option selected>128</option></select></div>
+        <div class="ctrl"><label>阵元间距 d <span class="val"></span></label>
+          <input type="range" id="m6-d" min="2" max="6" step="0.1" value="3"></div>
+        <div class="ctrl"><label>横向角 θx（相位）<span class="val"></span></label>
+          <input type="range" id="m6-thx" min="-15" max="15" step="0.1" value="0"></div>
+        <div class="ctrl"><label>纵向波长（nm）<span class="val"></span></label>
+          <input type="range" id="m6-wl" min="1542.1" max="1554.9" step="0.1" value="1548.5"></div>
+      </div>
+      <div class="panel">
+        <h4><span class="dot"></span>电光移相读数</h4>
+        <div class="metrics">
+          <div class="metric"><div class="ml">2π 移相长度 L₂π（式2）</div><div class="mv cyan" id="m6-r-L">—</div></div>
+          <div class="metric"><div class="ml">单步相位配置时间</div><div class="mv amber" id="m6-r-t">&lt; 5 μs</div></div>
+          <div class="metric"><div class="ml">纵向角 θy</div><div class="mv magenta" id="m6-r-thy">—</div></div>
+        </div>
+        <button class="btn" id="m6-scan" style="width:100%;margin-top:6px">启动连续 2D 扫描</button>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>2D 远场光斑（横向相位 × 纵向波长）</h4>
+        <div class="canvas-box"><canvas id="m6-spot" style="height:430px"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" style="max-width:none;padding:0 26px">
+    <div class="stage-grid two">
+      <!-- 横向方向图 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>横向相位方向图</h4>
+        <div class="chart-box" id="m6-chart-x" style="height:230px"></div>
+      </div>
+      <!-- Table II -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>主瓣 −0.6~+0.6° 测量（Table II）</h4>
+        <div class="chart-box" id="m6-chart-table" style="height:230px"></div>
+        <div class="note" style="margin-top:6px;margin-bottom:0">0.1° 间隔各点 FWHM 与 SLSR：FWHM ≈ 0.30–0.33°，SLSR ≈ 7–10 dB。</div>
+      </div>
+    </div>
+
+    <div class="stage-grid two" style="margin-top:20px">
+      <!-- FPGA 时序 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>FPGA 相位配置时序（双端口 RAM → DAC）</h4>
+        <div class="chart-box" id="m6-chart-time" style="height:210px"></div>
+        <div class="note" style="margin-top:6px;margin-bottom:0">LTC2664-12 DAC：12 bit、±10 V、4.88 mV/LSB；RAM 读取 + SPI + DAC 建立，整帧 &lt; 5 μs。</div>
+      </div>
+      <!-- 2D 扫描帧 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>5×5 扫描帧时序动画</h4>
+        <div class="canvas-box"><canvas id="m6-frame" style="height:210px"></canvas></div>
+        <div class="note" style="margin-top:6px;margin-bottom:0">帧时间 t=(15τx+τy)×5（式5）；横向连续 15 点、纵向切换 1 次。</div>
+      </div>
+    </div>
+
+    <div class="stage-grid two" style="margin-top:20px">
+      <!-- SPGD -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>SPGD 校准：余弦相似度收敛</h4>
+        <div class="chart-box" id="m6-chart-spgd" style="height:200px"></div>
+      </div>
+      <!-- 速度对比 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>电光 vs 热光 相位配置速度</h4>
+        <div class="chart-box" id="m6-chart-speed" style="height:200px"></div>
+      </div>
+    </div>
+  </div>
+  <br><br>
+</div>
+
+<!-- ================= 理论分析 ================= -->
+<div class="tab-pane" id="pane-theory">
+ <div class="docs-body">
+  <h2>一、高速扫描的瓶颈与思路</h2>
+  <p>OPA 波束转向速度受两方面制约：①相位器响应（热光为 ms 级，速度慢）；②控制电子把相位配置下发到各通道的时间（串行 DAC、通信开销）。文献采用<strong>反偏 p-n 结电光移相器（载流子色散，μs 级）</strong>，并设计 <strong>FPGA + 双端口 RAM + 多通道并行 DAC</strong> 的高速控制架构，把单帧相位配置压缩到 5 μs 以内。</p>
+
+  <h2>二、电光移相原理</h2>
+  <p>反偏 p-n 结改变耗尽区载流子浓度，经等离子色散（载流子色散）效应改变折射率 Δn，长度 L 的移相器产生相位：</p>
+  <div class="formula"><div class="flabel">电光相位（式1）</div>
+  $$\varphi=\frac{2\pi\,\Delta n\,L}{\lambda}$$</div>
+  <div class="formula"><div class="flabel">2π 移相长度（式2）</div>
+  $$L_{2\pi}=\frac{\lambda}{\Delta n}$$</div>
+  <p>取 Δn≈1×10⁻⁴、λ=1550 nm，则 L₂π≈15.5 mm；增大 Δn 可缩短移相器。电光效应仅受载流子寿命/RC 限制，达 μs 甚至 ns 级，远快于热光（~200 ms 量级的温度稳定）。</p>
+
+  <h2>三、二维扫描解耦</h2>
+  <ul>
+    <li><strong>横向 θx：</strong>阵元相位差控制，$\sin\theta_x=\lambda\varphi/(2\pi d)$；</li>
+    <li><strong>纵向 θy：</strong>波长经光栅控制，$\sin\theta_y=n_{\mathrm{eff}}-\lambda/p$。</li>
+  </ul>
+  <p>纵向用 5 个波长 1542.1 / 1545.3 / 1548.5 / 1551.7 / 1554.9 nm，波长间隔 0.07 nm 对应纵向步进约 0.225°。</p>
+
+  <h2>四、FPGA 控制架构</h2>
+  <p>控制电子以 FPGA 为核心（图1）：</p>
+  <ul>
+    <li><strong>双端口 RAM（D_RAM）：</strong>存储 M×N（M=128 通道、N 个扫描角）的相位查找表，一端由逻辑写入、另一端并行读出，实现“查表即输出”；</li>
+    <li><strong>DAC：</strong>LTC2664-12，12 bit、输出 ±10 V、分辨率 4.88 mV/LSB，多路并行把相位码转成驱动电压；</li>
+    <li><strong>SPI Flash：</strong>掉电保存相位表/校准数据，上电加载；</li>
+    <li>FPGA 按时序从 RAM 读出 128 通道相位码，经 DAC 同时建立。</li>
+  </ul>
+
+  <h2>五、相位配置时序与扫描帧</h2>
+  <p>单步横向配置时间 τx（式6）由 RAM 读取、SPI/总线传输、DAC 建立时间组成；整帧 128 通道配置 &lt; 5 μs。一个 5×5 扫描帧：横向每行连续 15 点、行间纵向切换 1 次，共 5 行：</p>
+  <div class="formula"><div class="flabel">5×5 帧时间（式5）</div>
+  $$t=(15\,\tau_x+\tau_y)\times 5$$</div>
+  <p>τy 为波长切换（激光器调谐）时间。该并行查表 + 并行 DAC 架构避免逐通道串行下发，是高速的关键。</p>
+
+  <h2>六、SPGD 校准与余弦相似度</h2>
+  <p>用 SPGD（随机并行梯度下降）对 128 通道相位做无模型校准，以<strong>余弦相似度</strong>衡量实测方向图与目标方向图的吻合程度，迭代使相似度趋近 1；校准结果固化进 RAM 查找表。</p>
+
+  <h2>七、主瓣测量与速度优势</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>主瓣角 (°)</th><th>−0.6</th><th>−0.5…+0.5</th><th>+0.6</th></tr>
+    <tr><td>FWHM (°)</td><td class="mono">≈0.32</td><td class="mono">≈0.30–0.33</td><td class="mono">≈0.32</td></tr>
+    <tr><td>SLSR (dB)</td><td class="mono">≈7–9</td><td class="mono">≈8–10</td><td class="mono">≈7–9</td></tr>
+  </table></div>
+  <div class="note green"><strong>结论：</strong>电光 p-n 移相（μs）+ FPGA 双端口 RAM 并行查表 + 多通道 DAC，使 128 通道 2D OPA 单帧配置 &lt; 5 μs，较热光方案（ms 级）提速约 4 个数量级，可支撑高速光束扫描、快速捕获跟踪与高帧率 LiDAR/FSO。</div>
+
+  <h2>八、关键参数</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>项目</th><th>参数</th><th>项目</th><th>参数</th></tr>
+    <tr><td>通道数</td><td class="mono">128</td><td>波长</td><td class="mono">1550 nm</td></tr>
+    <tr><td>移相机制</td><td class="mono">反偏 p-n，载流子色散</td><td>相位配置</td><td class="mono">&lt; 5 μs</td></tr>
+    <tr><td>DAC</td><td class="mono">LTC2664-12, 12 bit, 4.88 mV</td><td>RAM</td><td class="mono">双端口 M×N</td></tr>
+    <tr><td>纵向波长</td><td class="mono">1542.1–1554.9 nm</td><td>0.07 nm</td><td class="mono">≈0.225°</td></tr>
+    <tr><td>扫描帧</td><td class="mono">5×5，式5</td><td>校准</td><td class="mono">SPGD + 余弦相似度</td></tr>
+  </table></div>
+ </div>
+</div>
+
+<!-- ANCHOR-GUIDE -->
+<!-- ================= 使用说明 ================= -->
+<div class="tab-pane" id="pane-guide">
+ <div class="docs-body">
+  <h2>模块 6 使用说明</h2>
+  <p>本模块含 <strong>2D 光斑、横向方向图、Table II、FPGA 时序、5×5 扫描帧、SPGD、速度对比</strong> 7 组仿真。</p>
+
+  <h3>① 2D 远场光斑</h3>
+  <ol>
+    <li>选 N（默认 128）、d；</li>
+    <li>调横向角 θx（相位，±15°）与纵向波长（1542.1–1554.9 nm）；</li>
+    <li>光斑随之在二维平面移动；读数给出 L₂π（式2）、纵向角 θy、配置时间。</li>
+  </ol>
+  <div class="note"><strong>启动连续 2D 扫描：</strong>光斑自动按扫描帧遍历二维角度区，直观呈现高速扫描。</div>
+
+  <h3>② 横向方向图 / ③ Table II</h3>
+  <ul>
+    <li>横向方向图显示主瓣随 θx 移动；</li>
+    <li>Table II 卡呈现 −0.6~+0.6°（0.1 间隔）的 FWHM（≈0.30–0.33°）与 SLSR（≈7–10 dB）。</li>
+  </ul>
+
+  <h3>④ FPGA 时序 / ⑤ 5×5 扫描帧</h3>
+  <ul>
+    <li>时序图展示 RAM 读取 → 总线传输 → DAC 建立的过程，整帧 &lt; 5 μs；</li>
+    <li>5×5 网格动画逐点点亮（每行 15 点横向 + 1 次纵向切换），帧时间按式5 估算。</li>
+  </ul>
+
+  <h3>⑥ SPGD / ⑦ 速度对比</h3>
+  <ul>
+    <li>SPGD 余弦相似度随迭代趋近 1；</li>
+    <li>柱状（对数轴）对比电光（~5 μs）与热光（~2×10⁵ μs）配置时间，相差约 4 个数量级。</li>
+  </ul>
+
+  <h3>参数速查 / FAQ</h3>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>控件</th><th>含义</th><th>文献值</th></tr>
+    <tr><td>N / d</td><td>通道数 / 间距</td><td class="mono">128 / 3 μm</td></tr>
+    <tr><td>θx</td><td>横向相位角</td><td class="mono">±15°（Table II 验证 ±0.6°）</td></tr>
+    <tr><td>波长</td><td>纵向波长扫描</td><td class="mono">1542.1–1554.9 nm</td></tr>
+    <tr><td>DAC</td><td>数模转换</td><td class="mono">12 bit, 4.88 mV/LSB</td></tr>
+  </table></div>
+  <ul>
+    <li>连续扫描动画可用“启动连续 2D 扫描”按钮，再次点击停止；</li>
+    <li>时序为示意性重建（非真实示波器抓取），用于说明并行查表 + DAC 的高速机制；</li>
+    <li>图表/公式异常用 Live Server 打开并确认联网。</li>
+  </ul>
+ </div>
+</div>
+
+<div class="tab-pane" id="pane-scene3d">
+  <div class="wrap" style="max-width:none;padding:20px 26px"><div id="m6-scene"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../assets/js/scene3d.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  const P = window.OPA, LAM0 = 1548.5;
+  const chX = P.makeChart('m6-chart-x'), chTbl = P.makeChart('m6-chart-table'),
+        chTime = P.makeChart('m6-chart-time'), chSpgd = P.makeChart('m6-chart-spgd'), chSpd = P.makeChart('m6-chart-speed');
+  let scanning = false, timer = null;
+
+  function cfg() {
+    const wl = +document.getElementById('m6-wl').value;
+    return { N: +document.getElementById('m6-N').value, d: +document.getElementById('m6-d').value * 1e-6,
+             thx: +document.getElementById('m6-thx').value, wl,
+             thy: (wl - LAM0) / .07 * .225 };
+  }
+
+  /* ---------- 2D 光斑 ---------- */
+  function drawSpot() {
+    const c = cfg();
+    const cv = document.getElementById('m6-spot'); P.fitCanvas(cv, 430);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    // 网格
+    ctx.strokeStyle = 'rgba(90,120,170,.18)'; ctx.lineWidth = 1;
+    for (let g = 0; g <= 10; g++) { const x = g / 10 * W; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      const y = g / 10 * H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    // 轴
+    ctx.strokeStyle = 'rgba(140,170,220,.5)';
+    ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    const fx = W / 2 + c.thx / 15 * W * .42;
+    const fy = H / 2 - c.thy / 21 * H * .42;
+    P.drawGaussianSpot(cv, fx / W, fy / H, 52 * dpr, '47,215,215', .9);
+    ctx.fillStyle = '#6c7ea0'; ctx.font = `${9 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText('θx→', W - 40, H - 8); ctx.fillText('θy↑', 6, 14);
+    ctx.fillStyle = '#2fd7d7'; ctx.fillText('(' + c.thx.toFixed(1) + '°, ' + c.thy.toFixed(1) + '°)', fx + 18, fy - 14);
+    document.getElementById('m6-r-thy').textContent = c.thy.toFixed(2) + '°';
+  }
+
+  /* ---------- 横向方向图 ---------- */
+  function drawX() {
+    const c = cfg();
+    const ph = P.linearPhases(c.N, c.thx, c.d, LAM0 * 1e-9).phases;
+    const r = P.arrayFactor1D({ N: c.N, d: c.d, lambda: LAM0 * 1e-9, phases: ph, angMin: c.thx - 2, angMax: c.thx + 2, angStep: .02 });
+    chX.setOption({ xAxis: { name: 'θx (°)', type: 'value', min: c.thx - 2, max: c.thx + 2 }, yAxis: { name: '增益 (dB)', min: -35, max: 3 },
+      series: [P.patternSeries(r.ang, r.db, '横向', '#2fd7d7')] }, true);
+    document.getElementById('m6-r-L').textContent = (LAM0 * 1e-9 / 1e-4 * 1e3).toFixed(1) + ' mm';
+  }
+
+  /* ---------- Table II ---------- */
+  function drawTbl() {
+    const ang = [], fw = [], sl = [];
+    for (let a = -.6; a <= .601; a += .1) {
+      ang.push(+a.toFixed(1));
+      fw.push(+(0.31 + Math.sin(a * 9) * .012).toFixed(3));
+      sl.push(+(8.6 + Math.sin(a * 7) * 1.2).toFixed(2));
+    }
+    chTbl.setOption({
+      xAxis: { name: '主瓣角 (°)', type: 'category', data: ang },
+      yAxis: [{ name: 'FWHM (°)', min: .25, max: .36 }, { name: 'SLSR (dB)', min: 5, max: 12 }],
+      legend: { data: ['FWHM', 'SLSR'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      series: [
+        { name: 'FWHM', type: 'bar', data: fw, itemStyle: { color: '#2fd7d7' }, barWidth: '40%' },
+        { name: 'SLSR', type: 'line', yAxisIndex: 1, data: sl, itemStyle: { color: '#f6b942' }, lineStyle: { color: '#f6b942' } }
+      ]
+    }, true);
+  }
+
+  /* ---------- FPGA 时序 ---------- */
+  function drawTime() {
+    const t = [], ram = [], dac = [], phi = [];
+    for (let x = 0; x <= 5; x += .05) {
+      t.push(+x.toFixed(2));
+      ram.push(x >= .4 && x <= 1.4 ? 1 : 0);
+      // DAC 在 1.5 开始建立，3 稳定
+      let d = x < 1.5 ? .15 : Math.min(1, .15 + (x - 1.5) / 1.2);
+      dac.push(+d.toFixed(3));
+      let p = x < 2.6 ? .1 : Math.min(1, .1 + (x - 2.6) / 1.6);
+      phi.push(+p.toFixed(3));
+    }
+    chTime.setOption({
+      xAxis: { name: '时间 (μs)', type: 'value', min: 0, max: 5 },
+      yAxis: { type: 'value', show: false, min: 0, max: 1.4 },
+      legend: { data: ['RAM 读', 'DAC 输出', '相位稳定'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      series: [
+        { name: 'RAM 读', type: 'line', step: 'middle', data: t.map((q, i) => [q, ram[i] * 1.2]), showSymbol: false, lineStyle: { color: '#7aa2ff', width: 1.8 } },
+        { name: 'DAC 输出', type: 'line', data: t.map((q, i) => [q, dac[i]]), showSymbol: false, lineStyle: { color: '#f6b942', width: 2 } },
+        { name: '相位稳定', type: 'line', data: t.map((q, i) => [q, phi[i]]), showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 },
+          markLine: { silent: true, symbol: 'none', lineStyle: { color: '#e26bd6', type: 'dashed' }, data: [{ xAxis: 4.5, label: { formatter: '<5 μs', color: '#e26bd6' } }] } }
+      ]
+    }, true);
+  }
+
+  /* ---------- 5×5 扫描帧动画 ---------- */
+  function drawFrame(progress) {
+    const cv = document.getElementById('m6-frame'); P.fitCanvas(cv, 210);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    const gx0 = W * .2, gx1 = W * .8, gy0 = H * .18, gy1 = H * .78;
+    for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+      const x = gx0 + c / 4 * (gx1 - gx0), y = gy0 + r / 4 * (gy1 - gy0);
+      const idx = r * 5 + c;
+      ctx.beginPath(); ctx.arc(x, y, 7 * dpr, 0, 7);
+      if (idx <= progress) { ctx.fillStyle = '#2fd7d7'; ctx.fill(); }
+      else { ctx.strokeStyle = 'rgba(120,150,190,.5)'; ctx.lineWidth = 1.4; ctx.stroke(); }
+    }
+    const tFrame = (15 * 2 + 10) * 5;
+    ctx.fillStyle = '#f6b942'; ctx.font = `${10 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText('帧时间 t=(15τx+τy)×5 ≈ ' + tFrame + ' μs', 12, H - 12);
+  }
+  async function playFrame() {
+    for (let p = -1; p < 25; p++) { drawFrame(p); await P.sleep(110); }
+  }
+
+  /* ---------- SPGD ---------- */
+  function drawSpgd() {
+    const X = [0], Y = [.58]; let v = .58;
+    for (let k = 1; k <= 60; k++) {
+      v += (1 - v) * .09 + (Math.random() * .03 - .015) * (1 - v);
+      X.push(k); Y.push(+Math.min(.999, v).toFixed(4));
+    }
+    chSpgd.setOption({ xAxis: { name: 'SPGD 迭代', type: 'value' }, yAxis: { name: '余弦相似度', min: .5, max: 1 },
+      series: [{ type: 'line', showSymbol: false, data: X.map((q, i) => [q, Y[i]]), lineStyle: { color: '#e26bd6', width: 2.2 },
+        areaStyle: { color: 'rgba(226,107,214,.13)' }, markLine: { silent: true, symbol: 'none', lineStyle: { color: '#4ade9a', type: 'dashed' }, data: [{ yAxis: .99 }] } }] }, true);
+  }
+
+  /* ---------- 速度对比 ---------- */
+  function drawSpd() {
+    chSpd.setOption({
+      xAxis: { type: 'category', data: ['电光 p-n', '热光 TO'] },
+      yAxis: { name: '配置时间 (μs)', type: 'log' },
+      series: [{ type: 'bar', barWidth: '46%',
+        data: [{ value: 5, itemStyle: { color: '#2fd7d7' } }, { value: 200000, itemStyle: { color: '#f6b942' } }],
+        label: { show: true, position: 'top', color: '#e7eefb', formatter: (p) => p.dataIndex ? '200 ms' : '5 μs' } }]
+    }, true);
+  }
+
+  /* ---------- 连续 2D 扫描 ---------- */
+  function toggleScan() {
+    const btn = document.getElementById('m6-scan');
+    if (scanning) { clearInterval(timer); scanning = false; btn.textContent = '启动连续 2D 扫描'; return; }
+    scanning = true; btn.textContent = '停止扫描';
+    let i = 0;
+    timer = setInterval(() => {
+      const thxVals = []; for (let q = -12; q <= 12; q += 6) thxVals.push(q);
+      const wlVals = [1542.1, 1545.3, 1548.5, 1551.7, 1554.9];
+      const ri = Math.floor(i / thxVals.length) % wlVals.length, ci = i % thxVals.length;
+      document.getElementById('m6-thx').value = thxVals[ci];
+      document.getElementById('m6-wl').value = wlVals[ri];
+      refresh(); i++;
+    }, 260);
+  }
+
+  function refresh() { drawSpot(); drawX(); }
+  ['m6-N', 'm6-d', 'm6-thx', 'm6-wl'].forEach(id => document.getElementById(id).addEventListener('input', refresh));
+  document.getElementById('m6-scan').addEventListener('click', toggleScan);
+
+  P.setupTabs();
+  if (window.OPA3D) window.OPA3D.mount(document.getElementById('m6-scene'),
+    { mode: 'm6', nOPA: 4, beamColor: 0x2fd7d7, title: '高速扫描 · FPGA OPA 网络' });
+  drawSpot(); drawX(); drawTbl(); drawTime(); drawSpgd(); drawSpd(); playFrame();
+  P.renderMath(document.getElementById('pane-theory'));
+  P.renderMath(document.getElementById('pane-guide'));
+})();
+</script>
+</body>
+</html>
