@@ -13,7 +13,7 @@
 
 <header class="topbar">
   <a class="brand" href="../index.html">
-    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#0c8fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
     <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
   </a>
   <nav class="topnav">
@@ -312,9 +312,9 @@
     const hc = hillClimb(c);
     chConv.setOption({
       xAxis: { name: '评估次数', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
-      legend: { data: ['逐通道爬山', '遗传算法'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      legend: { data: ['逐通道爬山', '遗传算法'], textStyle: { color: '#505f7b' }, top: 4 },
       series: [
-        { name: '逐通道爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 } }
+        { name: '逐通道爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#0c8fa0', width: 2.2 } }
       ]
     }, true);
     drawChHeat(hc, c);
@@ -323,15 +323,15 @@
     await P.sleep(30);
     const ga = gaRun(c);
     chConv.setOption({ series: [
-      { name: '逐通道爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 } },
-      { name: '遗传算法', type: 'line', data: ga.curve, showSymbol: false, lineStyle: { color: '#e26bd6', width: 1.8 } }
+      { name: '逐通道爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#0c8fa0', width: 2.2 } },
+      { name: '遗传算法', type: 'line', data: ga.curve, showSymbol: false, lineStyle: { color: '#bd24cf', width: 1.8 } }
     ] });
     chGa.setOption({
       xAxis: { name: '代数', type: 'value', min: 1, max: GENS }, yAxis: { name: '适应度', min: 0, max: 1 },
-      legend: { data: ['最佳', '平均'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      legend: { data: ['最佳', '平均'], textStyle: { color: '#505f7b' }, top: 4 },
       series: [
-        { name: '最佳', type: 'line', showSymbol: false, data: ga.bestH.map((q, i) => [i + 1, q]), lineStyle: { color: '#e26bd6', width: 2.2 } },
-        { name: '平均', type: 'line', showSymbol: false, data: ga.avgH.map((q, i) => [i + 1, q]), lineStyle: { color: '#f6b942', width: 1.6, type: 'dashed' } }
+        { name: '最佳', type: 'line', showSymbol: false, data: ga.bestH.map((q, i) => [i + 1, q]), lineStyle: { color: '#bd24cf', width: 2.2 } },
+        { name: '平均', type: 'line', showSymbol: false, data: ga.avgH.map((q, i) => [i + 1, q]), lineStyle: { color: '#d98a13', width: 1.6, type: 'dashed' } }
       ]
     }, true);
     document.getElementById('m5-ga-smsr').textContent = smsrOf(ga.volt, c).toFixed(2) + ' dB';
@@ -356,11 +356,11 @@
     chLog.setOption({
       xAxis: { name: 'n', type: 'value' }, yAxis: { name: 'x_n', min: 0, max: 1 },
       series: [{ type: 'line', data: X.map((q, i) => [q, Y[i]]), showSymbol: true, symbolSize: 3,
-        lineStyle: { color: '#f6b942', width: 1.6 }, itemStyle: { color: '#f6b942' } }]
+        lineStyle: { color: '#d98a13', width: 1.6 }, itemStyle: { color: '#d98a13' } }]
     }, true);
   }
   function drawFar() {
-    const c = { N: 64, d: 3e-6 }, recs = [-27, -25, 0, 1, 25, 27], cols = ['#e26bd6', '#f6b942', '#2fd7d7', '#4ade9a', '#7aa2ff', '#ff8fb0'];
+    const c = { N: 64, d: 3e-6 }, recs = [-27, -25, 0, 1, 25, 27], cols = ['#bd24cf', '#d98a13', '#0c8fa0', '#159f48', '#7aa2ff', '#ff8fb0'];
     const series = recs.map((g, i) => {
       const ph = P.linearPhases(c.N, g, c.d, LAM).phases;
       const r = P.arrayFactor1D({ N: c.N, d: c.d, lambda: LAM, phases: ph, angMin: -30, angMax: 30, angStep: .1 });
@@ -368,7 +368,7 @@
     });
     chFar.setOption({
       xAxis: { name: '角度 (°)', type: 'value', min: -30, max: 30 }, yAxis: { name: '增益 (dB)', min: -40, max: 3 },
-      legend: { data: recs.map(q => q + '°'), textStyle: { color: '#a7b8d6' }, top: 4, type: 'scroll' }, series
+      legend: { data: recs.map(q => q + '°'), textStyle: { color: '#505f7b' }, top: 4, type: 'scroll' }, series
     }, true);
   }
 
@@ -376,7 +376,7 @@
   document.getElementById('m5-run-hc').addEventListener('click', async () => {
     const c = cfg(); const hc = hillClimb(c);
     chConv.setOption({ xAxis: { name: '评估次数', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
-      series: [{ name: '爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 } }] }, true);
+      series: [{ name: '爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#0c8fa0', width: 2.2 } }] }, true);
     drawChHeat(hc, c);
     document.getElementById('m5-hc-smsr').textContent = smsrOf(hc.volt, c).toFixed(2) + ' dB';
     document.getElementById('m5-hc-eval').textContent = hc.evals + ' / ' + fmtTime(hc.evals);
@@ -384,11 +384,11 @@
   document.getElementById('m5-run-ga').addEventListener('click', async () => {
     const c = cfg(); const ga = gaRun(c);
     chConv.setOption({ xAxis: { name: '评估次数', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
-      series: [{ name: 'GA', type: 'line', data: ga.curve, showSymbol: false, lineStyle: { color: '#e26bd6', width: 1.8 } }] }, true);
+      series: [{ name: 'GA', type: 'line', data: ga.curve, showSymbol: false, lineStyle: { color: '#bd24cf', width: 1.8 } }] }, true);
     chGa.setOption({ xAxis: { name: '代数', type: 'value', min: 1, max: GENS }, yAxis: { name: '适应度', min: 0, max: 1 },
       series: [
-        { type: 'line', showSymbol: false, data: ga.bestH.map((q, i) => [i + 1, q]), lineStyle: { color: '#e26bd6', width: 2.2 } },
-        { type: 'line', showSymbol: false, data: ga.avgH.map((q, i) => [i + 1, q]), lineStyle: { color: '#f6b942', width: 1.6, type: 'dashed' } }
+        { type: 'line', showSymbol: false, data: ga.bestH.map((q, i) => [i + 1, q]), lineStyle: { color: '#bd24cf', width: 2.2 } },
+        { type: 'line', showSymbol: false, data: ga.avgH.map((q, i) => [i + 1, q]), lineStyle: { color: '#d98a13', width: 1.6, type: 'dashed' } }
       ] }, true);
     document.getElementById('m5-ga-smsr').textContent = smsrOf(ga.volt, c).toFixed(2) + ' dB';
     document.getElementById('m5-ga-eval').textContent = ga.evals + ' / ' + fmtTime(ga.evals);
