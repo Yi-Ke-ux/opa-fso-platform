@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M4 · 单片集成端射 OPA | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home" href="../index.html">首页</a>
+    <a href="module1-pat.html">M1</a><a href="module2-multiwavelength.html">M2</a>
+    <a href="module3-deeplearning.html">M3</a><a class="active" href="module4-monolithic.html">M4</a>
+    <a href="module5-algorithms.html">M5</a><a href="module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 模块 04</div>
+  <h1>单片集成光学相控阵光无线通信发射机</h1>
+  <div class="src">Kim Y., Kulmer L., Keller K., et al. "Monolithically Integrated Optical Phased Array for Optical Wireless Communication." <em>Journal of Lightwave Technology</em>, Vol.42, No.23, pp.8181–8188, Dec. 2024.</div>
+  <div class="tags">
+    <span class="tag cyan">TWE-MZM + CMOS Driver + 1×64 OPA</span><span class="tag">1310 nm · 端射 WGA</span>
+    <span class="tag amber">横向 ±14.3° / 纵向 ±22.7°</span><span class="tag magenta">15 Gbps · 210 mW</span>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-target="pane-sim">交互仿真</button>
+  <button class="tab-btn" data-target="pane-theory">理论分析</button>
+  <button class="tab-btn" data-target="pane-guide">使用说明</button>
+  <button class="tab-btn" data-target="pane-scene3d">三维场景</button>
+</div>
+
+<!-- ================= 交互仿真 ================= -->
+<div class="tab-pane active" id="pane-sim">
+
+  <!-- 横向端射线阵 -->
+  <div class="workbench">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>端射线阵参数</h4>
+        <div class="ctrl"><label>阵元数 N <span class="val"></span></label>
+          <select id="m4-N"><option>16</option><option>32</option><option selected>64</option></select></div>
+        <div class="ctrl"><label>阵元间距 d <span class="val"></span></label>
+          <input type="range" id="m4-d" min="1.2" max="3" step="0.05" value="1.7"></div>
+        <div class="ctrl"><label>波长 λ₀ <span class="val"></span></label>
+          <input type="range" id="m4-lam" min="1280" max="1340" step="1" value="1310"></div>
+        <div class="ctrl"><label>横向转向角 <span class="val"></span></label>
+          <input type="range" id="m4-steer" min="-14.3" max="14.3" step="0.1" value="0"></div>
+      </div>
+      <div class="panel">
+        <h4><span class="dot"></span>波束读数</h4>
+        <div class="metrics">
+          <div class="metric"><div class="ml">实际转向</div><div class="mv cyan" id="m4-r-steer">—</div></div>
+          <div class="metric"><div class="ml">HPBW（式2）</div><div class="mv" id="m4-r-hpbw">—</div></div>
+          <div class="metric"><div class="ml">无栅瓣单侧 FOV（式1）</div><div class="mv amber" id="m4-r-fov">—</div></div>
+          <div class="metric"><div class="ml">SLSR</div><div class="mv magenta" id="m4-r-slsr">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>端射 64 线阵横向方向图</h4>
+        <div class="chart-box tall" id="m4-chart-pat"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" style="max-width:none;padding:0 26px">
+    <div class="stage-grid two">
+      <!-- 波束宽度理论 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>波束宽度理论：HPBW 随 N 变化</h4>
+        <div class="chart-box" id="m4-chart-hbw" style="height:250px"></div>
+        <div class="ctrl" style="margin-top:6px"><label>用于曲线的间距 d <span class="val"></span></label>
+          <input type="range" id="m4-hbw-d" min="1.3" max="2.5" step="0.05" value="1.7"></div>
+      </div>
+      <!-- 光栅天线 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>WGA 光栅：周期与纵向波长扫描</h4>
+        <div class="chart-box" id="m4-chart-long" style="height:180px"></div>
+        <div class="ctrl" style="margin-top:6px"><label>目标辐射角 φ_air <span class="val"></span></label>
+          <input type="range" id="m4-phiair" min="5" max="35" step="0.5" value="15"></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">光栅周期 Λ（式3）</div><div class="mv cyan" id="m4-r-lam">—</div></div>
+          <div class="metric"><div class="ml">有效折射率 n_eff</div><div class="mv amber" id="m4-r-neff">2.4</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-grid two" style="margin-top:20px">
+      <!-- 辐射效率热图 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>单 WGA 辐射效率（波导宽 W × 辐射角）</h4>
+        <div class="canvas-box"><canvas id="m4-eff" style="height:250px"></canvas></div>
+        <div class="note" style="margin-top:10px;margin-bottom:0">文献 FDTD 最优：W=1200 nm、Λ=510 nm、M=40、φ=15°，效率 ≈ 50%。</div>
+      </div>
+      <!-- 调制眼图 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>TWE-MZM 调制眼图</h4>
+        <div class="canvas-box"><canvas id="m4-eye" style="height:180px"></canvas></div>
+        <div class="ctrl" style="margin-top:8px"><label>数据速率 <span class="val"></span></label>
+          <input type="range" id="m4-rate" min="2" max="15" step="1" value="15"></div>
+        <div class="ctrl"><label>SNR <span class="val"></span></label>
+          <input type="range" id="m4-snr" min="6" max="24" step="1" value="18"></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">消光比 ER</div><div class="mv amber" id="m4-r-er">3.6 dB</div></div>
+          <div class="metric"><div class="ml">Driver −3 dB BW</div><div class="mv cyan" id="m4-r-bw">19.7 GHz</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br><br>
+</div>
+
+<!-- ================= 理论分析 ================= -->
+<div class="tab-pane" id="pane-theory">
+ <div class="docs-body">
+  <h2>一、单片集成的动机</h2>
+  <p>早期硅基 OPA 无线发射机使用<strong>商用、off-shelf 的 RF 放大器与 MZM</strong>，体积大（实测原型约 3730 mm²）、成本高；III-V 材料行波 MZM（TWE-MZM）模场与单模光纤相差 2 cm²（含包层），通用 RF 放大器非针对具体器件设计，BW 与功耗未优化，连接电子/光子器件时还存在阻抗失配、寄生效应、信号损耗。</p>
+  <p>文献首次把<strong>硅基 TWE-MZM、宽带 mm-Wave CMOS driver 与 1×64 OPA 单片集成</strong>在同一芯片，active area 仅 6.4 mm²，实现紧凑、低功耗、高性价比的 OWC 发射机。</p>
+
+  <h2>二、系统架构</h2>
+  <p>芯片（图 3）单片集成光子 TX 与电子 IC，OWC TX 含 V-groove 对准结构。宽带 EO 调制器为硅基 TWE-MZM；mm-Wave CMOS driver 经 1×2 MMI 分束、n-i-n 结 TO 相位加热器（相位校准）、64 单元 WGA。driver 差分 50 Ω 输出经 1×2 MMI 把调制光功分到 64 相位通道，经波束控制在自由空间形成所需方向波束。</p>
+
+  <h2>三、波束宽度理论</h2>
+  <p>端射（end-fire / broadside WGA）线阵的两个关键角度：</p>
+  <div class="formula"><div class="flabel">无栅瓣单侧最大角（式1）</div>
+  $$\Delta\theta_{3\mathrm{dB}}=\sin^{-1}\!\left(\frac{\lambda_0}{2d}\right)$$</div>
+  <div class="formula"><div class="flabel">均匀孔径半功率波束宽度（式2）</div>
+  $$\Delta\theta_{3\mathrm{dB}}=0.886\,\frac{\lambda_0}{Nd}\left(\frac{180}{\pi}\right)$$</div>
+  <p>$\lambda_0$ 自由空间波长，$d$ 阵元间距，$N$ 阵元数。取 $\lambda_0=1310$ nm、$d=1.7\,\mu$m、$N=64$：式1 得单侧约 22.7°，式2 得 HPBW ≈ 0.61°（实测横向 0.77°）。</p>
+
+  <h2>四、TWE-MZM 与 CMOS Driver</h2>
+  <p>TWE-MZM 两臂由差分 driver 驱动以最大化调制幅度，50 Ω 终端并联在差分输入；输入 15 Gbps NRZ、2 V<sub>PP</sub> 差分电信号，driver 输出 3.2 V<sub>PP</sub> 并做阻抗匹配，MZM 终端 80 Ω 集成多硅电阻；2 mm 终端 p-n 结在 MZM 每臂作 EO 调制，TO 相位加热器控制偏置以减小损耗。</p>
+  <p>driver 为宽带 mm-Wave CMOS 推挽（CML buffer + PMOS/NMOS），采用电感峰化。post-layout：bond wire 电感 L<sub>WB</sub>=0 时 −3 dB BW 达 <strong>19.7 GHz</strong>（足够 15 Gbps），L<sub>WB</sub>=1 nH 时降至 7.5 GHz；上升/下降时间约 4.47 ps。实测消光比 ER≈3.6 dB。</p>
+
+  <h2>五、WGA 波导光栅天线</h2>
+  <p>光栅以角 $\varphi_{air}$ 向上辐射，周期由下式确定：</p>
+  <div class="formula"><div class="flabel">光栅周期（式3）</div>
+  $$\Lambda=\frac{\lambda_0}{n_{\mathrm{eff}}-\sin(\varphi_{air})}$$</div>
+  <p>$n_{\mathrm{eff}}$ 为 50% 占空比光栅有效折射率。辐射效率随波导宽 $W$ 增大而升高并饱和、随辐射角变化（FDTD，图11）。取 $W=1200$ nm、$\Lambda=510$ nm、光栅段数 $M=40$、$\varphi=15°$，单 WGA 效率约 50%。</p>
+
+  <h2>六、远场与无线数据结果</h2>
+  <ul>
+    <li><strong>横向：</strong>波束转向范围 ±14.3°，发散 Δθ_3dB = 0.77°，SLSR 7.81 dB；</li>
+    <li><strong>纵向：</strong>波长 1290→1330 nm 扫描范围 ±22.7°，发散 Δφ_3dB = 4.23°；</li>
+    <li><strong>不对称性：</strong>横向孔径长（64 阵元）故波束窄，纵向仅 20 μm×2 μm 孔径故波束宽；</li>
+    <li><strong>无线传输：</strong>2 Gbps NRZ、2 m 链路，64 单元 WGA 总链路损耗 20.5 dB；眼图在 1310 nm 最宽。</li>
+  </ul>
+  <div class="note green"><strong>结论：</strong>该 one-chip OPA TX 把 EO 调制器、CMOS driver、大规 WGA 集成在 6.4 mm²，功耗仅 210 mW（off-shelf 方案约 6.36 W），在 1310 nm 实现 15 Gbps 电调制、±14.3° 横向转向，是紧凑低功耗 OWC 的重要进展。</div>
+
+  <h2>七、关键参数</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>项目</th><th>参数</th><th>项目</th><th>参数</th></tr>
+    <tr><td>阵元数 N</td><td class="mono">64</td><td>波长</td><td class="mono">1310 nm</td></tr>
+    <tr><td>间距 d</td><td class="mono">1.7 μm</td><td>芯片 active area</td><td class="mono">6.4 mm²</td></tr>
+    <tr><td>横向转向 / 发散</td><td class="mono">±14.3° / 0.77°</td><td>纵向转向 / 发散</td><td class="mono">±22.7° / 4.23°</td></tr>
+    <tr><td>SLSR</td><td class="mono">7.81 dB</td><td>电速率 / FSO 速率</td><td class="mono">15 / 2 Gbps</td></tr>
+    <tr><td>Driver BW</td><td class="mono">19.7 GHz</td><td>ER</td><td class="mono">3.6 dB</td></tr>
+    <tr><td>WGA W/Λ/M</td><td class="mono">1200 nm/510 nm/40</td><td>功耗</td><td class="mono">210 mW</td></tr>
+  </table></div>
+ </div>
+</div>
+
+<!-- ANCHOR-GUIDE -->
+<!-- ================= 使用说明 ================= -->
+<div class="tab-pane" id="pane-guide">
+ <div class="docs-body">
+  <h2>模块 4 使用说明</h2>
+  <p>本模块含 <strong>4 组仿真</strong>：① 端射线阵横向方向图；② 波束宽度理论；③ WGA 光栅周期与纵向扫描；④ 辐射效率热图与调制眼图。</p>
+
+  <h3>① 端射线阵横向方向图</h3>
+  <ol>
+    <li>选 N（默认 64）、d（默认 1.7 μm）、λ（默认 1310 nm）；</li>
+    <li>调「横向转向角」（±14.3°），窄主瓣跟随移动；</li>
+    <li>读数给出实际转向、HPBW（式2，约 0.6–0.8°）、无栅瓣单侧 FOV（式1，约 22.7°）、SLSR（约 7–13 dB）。</li>
+  </ol>
+  <div class="note"><strong>预期：</strong>N=64、d=1.7 μm 时 HPBW ≈ 0.61°（文献实测 0.77°），转向 ±14.3° 内无栅瓣。</div>
+
+  <h3>② 波束宽度理论</h3>
+  <p>曲线显示 HPBW（式2）随 N 增大而减小，可改 d 对比；直观理解「孔径越大波束越窄」，并定位 N=64 工作点，与实测 0.77° 对照。</p>
+
+  <h3>③ WGA 光栅</h3>
+  <ol>
+    <li>调「目标辐射角 φ_air」（默认 15°），读数由式3 给出光栅周期 Λ（约 510 nm 量级）；</li>
+    <li>纵向扫描图显示波长 1290→1330 nm 对应纵向角（±22.7°）；</li>
+    <li>n_eff 取 2.4（50% 占空比光栅）。</li>
+  </ol>
+
+  <h3>④ 辐射效率与眼图</h3>
+  <ul>
+    <li>热图横轴辐射角、纵轴波导宽 W，亮区为高效率，最优在 W≈1200 nm、φ≈15°（≈50%，文献 FDTD）；</li>
+    <li>眼图：调数据速率（最高 15 Gbps）与 SNR，眼睛随之变化；读数 ER≈3.6 dB、driver BW 19.7 GHz。</li>
+  </ul>
+
+  <h3>参数速查 / FAQ</h3>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>控件</th><th>含义</th><th>文献值</th></tr>
+    <tr><td>N / d</td><td>阵元数 / 间距</td><td class="mono">64 / 1.7 μm</td></tr>
+    <tr><td>λ</td><td>波长</td><td class="mono">1310 nm</td></tr>
+    <tr><td>横向角</td><td>相位转向</td><td class="mono">±14.3°，HPBW 0.77°</td></tr>
+    <tr><td>φ_air</td><td>光栅目标辐射角</td><td class="mono">15°，Λ≈510 nm</td></tr>
+    <tr><td>速率 / SNR</td><td>NRZ 速率 / 信噪比</td><td class="mono">15 Gbps</td></tr>
+  </table></div>
+  <ul>
+    <li>热图为基于文献 FDTD 结果的近似重建，用于定位最优点，非实时全波仿真；</li>
+    <li>图表空白用 Live Server 打开并确认联网；公式为源码则刷新加载 KaTeX。</li>
+  </ul>
+ </div>
+</div>
+
+<div class="tab-pane" id="pane-scene3d">
+  <div class="wrap" style="max-width:none;padding:20px 26px"><div id="m4-scene"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../assets/js/scene3d.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  const P = window.OPA;
+  const NEFF = 2.8;
+  const chPat = P.makeChart('m4-chart-pat'), chHbw = P.makeChart('m4-chart-hbw'), chLong = P.makeChart('m4-chart-long');
+
+  function par() {
+    return {
+      N: +document.getElementById('m4-N').value,
+      d: +document.getElementById('m4-d').value * 1e-6,
+      lam: +document.getElementById('m4-lam').value * 1e-9,
+      steer: +document.getElementById('m4-steer').value
+    };
+  }
+
+  /* ---------- 横向方向图 ---------- */
+  function drawPat() {
+    const x = par();
+    const phases = P.linearPhases(x.N, x.steer, x.d, x.lam).phases;
+    const r = P.arrayFactor1D({ N: x.N, d: x.d, lambda: x.lam, phases, angMin: x.steer - 2, angMax: x.steer + 2, angStep: .02 });
+    const a = P.analyzePattern(r.ang, r.psi);
+    chPat.setOption({
+      xAxis: { name: '横向角 (°)', type: 'value', min: x.steer - 2, max: x.steer + 2 },
+      yAxis: { name: '增益 (dB)', min: -35, max: 3 },
+      series: [P.patternSeries(r.ang, r.db, '横向', '#2fd7d7')]
+    }, true);
+    document.getElementById('m4-r-steer').textContent = a.peakAng.toFixed(2) + '°';
+    document.getElementById('m4-r-hpbw').textContent = P.hpbwUniform(x.lam, x.N, x.d).toFixed(3) + '°';
+    document.getElementById('m4-r-fov').textContent = P.fovEdge(x.lam, x.d).toFixed(1) + '°';
+    document.getElementById('m4-r-slsr').textContent = a.pslr.toFixed(2) + ' dB';
+  }
+
+  /* ---------- HPBW vs N ---------- */
+  function drawHbw() {
+    const d = +document.getElementById('m4-hbw-d').value * 1e-6;
+    const Ns = [], V = [];
+    for (let n = 8; n <= 128; n += 4) { Ns.push(n); V.push(+P.hpbwUniform(1310e-9, n, d).toFixed(3)); }
+    chHbw.setOption({
+      xAxis: { name: '阵元数 N', type: 'value' },
+      yAxis: { name: 'HPBW (°)', type: 'value' },
+      series: [{
+        type: 'line', data: Ns.map((q, i) => [q, V[i]]), showSymbol: false, smooth: true,
+        lineStyle: { color: '#2fd7d7', width: 2.4 }, areaStyle: { color: 'rgba(47,215,215,.13)' },
+        markPoint: { symbolSize: 46, label: { fontSize: 10 }, data: [{ coord: [64, P.hpbwUniform(1310e-9, 64, d)], value: 'N=64', itemStyle: { color: '#f6b942' } }] }
+      }]
+    }, true);
+  }
+
+  /* ---------- WGA 周期 + 纵向扫描 ---------- */
+  function drawLong() {
+    const phiair = +document.getElementById('m4-phiair').value;
+    const Lambda = P.gratingPeriod(1310e-9, NEFF, phiair);
+    document.getElementById('m4-r-lam').textContent = (Lambda * 1e9).toFixed(0) + ' nm';
+    document.getElementById('m4-r-neff').textContent = NEFF.toFixed(1);
+    const wl = [], ang = [];
+    for (let w = 1285; w <= 1335; w += 0.5) {
+      const a = P.gratingAngle(w * 1e-9, NEFF, Lambda);
+      wl.push(+w.toFixed(1)); ang.push(+a.toFixed(2));
+    }
+    chLong.setOption({
+      xAxis: { name: '波长 (nm)', type: 'value', min: 1285, max: 1335 },
+      yAxis: { name: '纵向角 (°)', type: 'value' },
+      series: [{ type: 'line', data: wl.map((q, i) => [q, ang[i]]), showSymbol: false, smooth: true, lineStyle: { color: '#e26bd6', width: 2.4 } }]
+    }, true);
+  }
+
+  /* ---------- 辐射效率热图（近似文献 FDTD） ---------- */
+  function drawEff() {
+    const cv = document.getElementById('m4-eff'); P.fitCanvas(cv, 250);
+    const nW = 60, nF = 70;
+    const M = [];
+    for (let j = 0; j < nW; j++) {
+      const W = 500 + (1 - j / nW) * 900;       // 纵轴 1400(top)→500
+      const sW = 1 - Math.exp(-Math.max(0, W - 400) / 330);
+      const row = [];
+      for (let i = 0; i < nF; i++) {
+        const phi = 10 + i / nF * 12;
+        const gF = Math.exp(-((phi - 15) ** 2) / (2 * 5.2 * 5.2));
+        row.push(Math.max(0, sW * (0.62 + 0.38 * gF) * 0.62));
+      }
+      M.push(row);
+    }
+    P.renderHeatmap(cv, M, [], [], { gamma: 0.85 });
+    const ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#e7eefb'; ctx.font = `${10 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText('辐射角 φ →', cv.width - 90, cv.height - 10);
+    ctx.save(); ctx.translate(12, 30); ctx.rotate(-Math.PI / 2); ctx.fillText('波导宽 W(nm)', 0, 0); ctx.restore();
+    // 最优点 W1200 φ15
+    const optY = (1 - (1200 - 500) / 900) * cv.height, optX = (15 - 10) / 12 * cv.width;
+    ctx.strokeStyle = '#f6b942'; ctx.lineWidth = 1.6 * dpr;
+    ctx.beginPath(); ctx.arc(optX, optY, 9 * dpr, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#f6b942'; ctx.fillText('Optimum ≈50%', optX + 12, optY - 8);
+  }
+
+  /* ---------- 眼图 ---------- */
+  function drawEye() {
+    const cv = document.getElementById('m4-eye'); P.fitCanvas(cv, 180);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    const rate = +document.getElementById('m4-rate').value;
+    const snr = +document.getElementById('m4-snr').value;
+    const traces = P.eyeTrace(rate, snr, 60, 20);
+    const mL = W * .12, mR = W * .9, mT = H * .14, mB = H * .86;
+    const X = x => mL + x / 2 * (mR - mL), Y = y => mB - y * (mB - mT);
+    ctx.strokeStyle = 'rgba(120,150,190,.3)'; ctx.setLineDash([4, 4]);
+    [0, .5, 1].forEach(y => { ctx.beginPath(); ctx.moveTo(mL, Y(y)); ctx.lineTo(mR, Y(y)); ctx.stroke(); });
+    ctx.setLineDash([]);
+    traces.forEach(t => {
+      ctx.strokeStyle = 'rgba(70,220,230,.34)'; ctx.lineWidth = 1.2 * dpr; ctx.beginPath();
+      t.forEach((p, i) => { const x = X(p[0]), y = Y(p[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+    });
+    ctx.fillStyle = '#6c7ea0'; ctx.font = `${9 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText(rate + ' Gbps', 8, 14 * dpr);
+  }
+
+  /* ---------- 事件 ---------- */
+  ['m4-N', 'm4-d', 'm4-lam', 'm4-steer'].forEach(id => document.getElementById(id).addEventListener('input', drawPat));
+  document.getElementById('m4-hbw-d').addEventListener('input', drawHbw);
+  document.getElementById('m4-phiair').addEventListener('input', drawLong);
+  ['m4-rate', 'm4-snr'].forEach(id => document.getElementById(id).addEventListener('input', drawEye));
+
+  P.setupTabs();
+  if (window.OPA3D) window.OPA3D.mount(document.getElementById('m4-scene'),
+    { mode: 'm4', nOPA: 3, beamColor: 0x2fd7d7, title: '单片集成 · 紧凑 OPA 部署' });
+  drawPat(); drawHbw(); drawLong(); drawEff(); drawEye();
+  P.renderMath(document.getElementById('pane-theory'));
+  P.renderMath(document.getElementById('pane-guide'));
+})();
+</script>
+</body>
+</html>
