@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M1 · 集成 OPA 的 PAT 闭环系统 | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home" href="../index.html">首页</a>
+    <a class="active" href="module1-pat.html">M1</a>
+    <a href="module2-multiwavelength.html">M2</a>
+    <a href="module3-deeplearning.html">M3</a>
+    <a href="module4-monolithic.html">M4</a>
+    <a href="module5-algorithms.html">M5</a>
+    <a href="module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 模块 01</div>
+  <h1>集成光学相控阵的指向-捕获-跟踪（PAT）闭环系统</h1>
+  <div class="src">Chen L., Zhu L., Du H., et al. "Pointing Acquisition and Tracking System for Free Space Optical Communication Based on Integrated Optical Phased Array." <em>IEEE Photonics Journal</em>, Vol.17, No.4, Aug. 2025 (7301608).</div>
+  <div class="tags">
+    <span class="tag cyan">512 单元硅基 OPA</span><span class="tag">相位控方位 / 波长控俯仰</span>
+    <span class="tag amber">REV 校准</span><span class="tag">四象限探测器 QD</span>
+    <span class="tag magenta">闭环跟踪 RMSE 0.024°</span>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-target="pane-sim">交互仿真</button>
+  <button class="tab-btn" data-target="pane-theory">理论分析</button>
+  <button class="tab-btn" data-target="pane-guide">使用说明</button>
+  <button class="tab-btn" data-target="pane-scene3d">三维场景</button>
+</div>
+
+<!-- ================= 交互仿真 ================= -->
+<div class="tab-pane active" id="pane-sim">
+
+  <!-- 主工作台：二维波束 -->
+  <div class="workbench">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>OPA 波束参数</h4>
+        <div class="ctrl"><label>阵元数量 N <span class="val"></span></label>
+          <select id="m1-N"><option>64</option><option>128</option><option>256</option><option selected>512</option></select></div>
+        <div class="ctrl"><label>阵元间距 d <span class="val"></span></label>
+          <input type="range" id="m1-d" min="1.5" max="8" step="0.1" value="3"></div>
+        <div class="ctrl"><label>工作波长 λ <span class="val"></span></label>
+          <input type="range" id="m1-lam" min="1500" max="1600" step="1" value="1550"></div>
+        <div class="ctrl"><label>方位角 φ（相位控制）<span class="val"></span></label>
+          <input type="range" id="m1-az" min="-30" max="30" step="0.1" value="0"></div>
+        <div class="ctrl"><label>俯仰角 θ（波长控制）<span class="val"></span></label>
+          <input type="range" id="m1-el" min="-2.5" max="2.5" step="0.05" value="0"></div>
+        <div class="switch-row">加入相位制造误差
+          <label class="switch"><input type="checkbox" id="m1-err"><span class="slider-sw"></span></label></div>
+        <div class="ctrl"><label>误差幅度（弧度 rms）<span class="val"></span></label>
+          <input type="range" id="m1-erramp" min="0.05" max="0.8" step="0.05" value="0.3"></div>
+        <div class="btn-row"><button class="btn sm" id="m1-reset">复位波束</button></div>
+      </div>
+      <div class="panel">
+        <h4><span class="dot"></span>实时特征读数</h4>
+        <div class="metrics">
+          <div class="metric"><div class="ml">方位主瓣</div><div class="mv cyan" id="m1-r-az">—</div></div>
+          <div class="metric"><div class="ml">俯仰主瓣</div><div class="mv cyan" id="m1-r-el">—</div></div>
+          <div class="metric"><div class="ml">方位 HPBW</div><div class="mv" id="m1-r-hb">—</div></div>
+          <div class="metric"><div class="ml">PSLR</div><div class="mv amber" id="m1-r-pslr">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>二维远场光斑（方位 φ × 俯仰 θ）</h4>
+        <div class="canvas-box"><canvas id="m1-beam2d"></canvas></div>
+      </div>
+      <div class="stage-grid two" style="margin-top:18px">
+        <div class="panel" style="margin:0"><h4><span class="dot"></span>方位切面（相位扫描）</h4><div class="chart-box" id="m1-chart-az" style="height:300px"></div></div>
+        <div class="panel" style="margin:0"><h4><span class="dot"></span>俯仰切面（波长扫描）</h4><div class="chart-box" id="m1-chart-el" style="height:300px"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 三个过程仿真 -->
+  <div class="wrap" style="max-width:none;padding:0 26px">
+    <div class="stage-grid" style="grid-template-columns:repeat(3,1fr)">
+
+      <!-- REV 校准 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>REV 旋转电场矢量校准</h4>
+        <div class="chart-box" id="m1-chart-rev" style="height:210px"></div>
+        <div class="ctrl" style="margin-top:10px"><label>校准通道 <span class="val" id="m1-revch-txt"></span></label>
+          <input type="range" id="m1-revch" min="0" max="15" step="1" value="0"></div>
+        <div class="btn-row">
+          <button class="btn sm primary" id="m1-rev-run">自动校准</button>
+          <button class="btn sm" id="m1-rev-step">单步</button>
+          <button class="btn sm" id="m1-rev-reset">复位</button></div>
+        <div class="logline" id="m1-rev-log" style="margin-top:10px"></div>
+      </div>
+
+      <!-- QD 测角 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>四象限探测器（QD）测到达角</h4>
+        <div class="canvas-box"><canvas id="m1-qd" style="height:210px"></canvas></div>
+        <div class="ctrl" style="margin-top:10px"><label>光斑横向偏移 x<sub>c</sub> <span class="val"></span></label>
+          <input type="range" id="m1-qdx" min="-1" max="1" step="0.02" value="0.3"></div>
+        <div class="ctrl"><label>光斑纵向偏移 y<sub>c</sub> <span class="val"></span></label>
+          <input type="range" id="m1-qdy" min="-1" max="1" step="0.02" value="-0.2"></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">方位角 α</div><div class="mv cyan" id="m1-qd-alpha">—</div></div>
+          <div class="metric"><div class="ml">俯仰角 β</div><div class="mv cyan" id="m1-qd-beta">—</div></div>
+        </div>
+      </div>
+
+      <!-- 闭环跟踪 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>PAT 闭环跟踪（目标抖动）</h4>
+        <div class="canvas-box"><canvas id="m1-track" style="height:210px"></canvas></div>
+        <div class="ctrl" style="margin-top:10px"><label>扰动幅度（°）<span class="val"></span></label>
+          <input type="range" id="m1-dist" min="0.2" max="2.5" step="0.1" value="1.2"></div>
+        <div class="btn-row">
+          <span class="pill-status" id="m1-track-status"><span class="b"></span>未运行</span>
+          <button class="btn sm primary" id="m1-track-run">运行</button>
+          <button class="btn sm" id="m1-track-reset">复位</button></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">跟踪 RMSE</div><div class="mv magenta" id="m1-rmse">—</div></div>
+          <div class="metric"><div class="ml">瞬时误差</div><div class="mv" id="m1-ierr">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 波束质量与带宽 -->
+    <div class="stage-grid two" style="margin-top:20px">
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>波束质量：PSLR 与高斯发散角</h4>
+        <div class="metrics" style="margin-top:0">
+          <div class="metric"><div class="ml">峰值旁瓣比 PSLR</div><div class="mv amber" id="m1-q-pslr">> 12 dB</div></div>
+          <div class="metric"><div class="ml">束腰半径 w₀ <span class="val" style="color:var(--cyan)"></span></div>
+            <input type="range" id="m1-w0" min="2" max="30" step="1" value="9" style="margin-top:6px"></div>
+          <div class="metric"><div class="ml">高斯远场发散半角 θ</div><div class="mv cyan" id="m1-q-div">—</div></div>
+          <div class="metric"><div class="ml">文献实测全发散</div><div class="mv" id="m1-q-divref">≈ 0.07°</div></div>
+        </div>
+      </div>
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>波长切换阶跃响应与闭环带宽</h4>
+        <div class="chart-box" id="m1-chart-bw" style="height:230px"></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">上升时间 tᵣ (10–90%)</div><div class="mv cyan" id="m1-q-tr">45.45 μs</div></div>
+          <div class="metric"><div class="ml">估算带宽 BW=0.35/tᵣ</div><div class="mv green" id="m1-q-bw">5.8 kHz</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br><br>
+</div>
+
+<!-- ================= 理论分析 ================= -->
+<div class="tab-pane" id="pane-theory">
+ <div class="docs-body">
+  <h2>一、PAT 系统概述</h2>
+  <p>文献针对<strong>低轨卫星（LEO）—飞机</strong>高速激光链路，提出并实验验证了一套基于<strong>集成光学相控阵（OPA）</strong>的指向-捕获-跟踪（Pointing, Acquisition, Tracking, PAT）闭环系统。飞机的振动、发动机工作及机身摩擦会造成光束抖动与额外链路损耗，要求 PAT 系统具备<strong>高带宽、高精度的快速波束控制</strong>能力。</p>
+  <p>PAT 三阶段：</p>
+  <ul>
+    <li><strong>指向 Pointing：</strong>利用初始卫星位置信息，将光束粗略指向目标所在区域；</li>
+    <li><strong>捕获 Acquisition：</strong>在不确定区域内扫描，探测对方信标（beacon 905 nm），建立链路；</li>
+    <li><strong>跟踪 Tracking：</strong>在 5°×5° 视场内闭环锁定，持续补偿振动引起的指向误差。</li>
+  </ul>
+  <div class="note">系统两大核心模块：<strong>OPA 发射模块</strong>（512 单元、波长可调激光器、系统控制器）与<strong>到达角检测模块</strong>（透镜组、四象限探测器 QD、信号采集）。</div>
+
+  <h2>二、OPA 二维波束扫描原理</h2>
+  <p>该 OPA 为 512 单元硅基光子集成相控阵，发射天线阵列以 <strong>1.8 μm</strong> 波长间距排布，可实现<strong>两个正交方向</strong>的二维扫描。</p>
+  <h3>2.1 远场干涉</h3>
+  <p>把 OPA 视为由大量天线单元组成的发射机，远场为各单元辐射场的相干叠加。远场任意点 $P$ 的总场为：</p>
+  <div class="formula"><div class="flabel">远场复振幅（式 1）</div>
+  $$E(\varphi)=\sum_{n=1}^{N} f_n(\varphi)\,A_n\,\exp(j\Phi_n)\,\exp(j\mathbf{k}_n\mathbf{r}_n)$$</div>
+  <p>其中 $N$ 为阵元数，$f_n(\varphi)$ 为单元方向图，$A_n$、$\Phi_n$ 为第 $n$ 单元的振幅与相位，$\mathbf{k}_n$ 为波矢，$\mathbf{r}_n$ 为位置矢量。</p>
+
+  <h3>2.2 方位角 φ：相位控制</h3>
+  <p>方位方向通过<strong>调节相邻阵元的相位差</strong>实现（一维 $N$ 单元相控阵）。相邻阵元施加线性相位差 $\Delta\phi$ 时，主瓣指向 $\varphi$ 满足：</p>
+  <div class="formula"><div class="flabel">相位—转向关系</div>
+  $$\sin\varphi=\frac{\Delta\phi}{k_0 d}=\frac{\lambda\,\Delta\phi}{2\pi d}$$</div>
+  <p>其中 $k_0=2\pi/\lambda$ 为波数，$d$ 为阵元间距。本平台主工作台即按该式实时计算方位方向图。</p>
+
+  <h3>2.3 俯仰角 θ：波长控制（光栅方程）</h3>
+  <p>该 OPA 以<strong>光栅耦合器</strong>作为发射单元，俯仰扫描通过<strong>改变波长</strong>实现。出射角 $\theta$ 与波长的关系为：</p>
+  <div class="formula"><div class="flabel">光栅方程（式 2）</div>
+  $$\sin\theta=\frac{\lambda n_{\mathrm{eff}}-\lambda_0 n_{\mathrm{cl}}}{\Lambda}$$</div>
+  <p>其中光栅周期 $\Lambda=0.68\,\mu\mathrm{m}$，波导有效折射率 $n_{\mathrm{eff}}=2.98$，包层背景折射率 $n_{\mathrm{cl}}\approx1$，$\lambda_0$ 为真空波长。由于出射光与波导方向成固定夹角并形成锥形波前，文献采用<strong>楔形棱镜（10°）</strong>将弯曲光带校正为直线，降低了相位与二维标定的复杂度。</p>
+
+  <h2>三、REV 旋转电场矢量校准</h2>
+  <p>制造相位误差会使远场主瓣展宽、旁瓣抬升，须先校准各发射单元的相位分布。文献采用 <strong>REV（Rotating Element Electric-field Vector，旋转电场矢量）</strong>算法：<strong>依次</strong>调节每个通道的相位（等效于旋转该通道的电场矢量），当该通道电场矢量与其余通道<strong>同相</strong>时，合束远场强度达到最大，即完成该通道校准；逐通道进行直至全部完成。</p>
+  <div class="formula"><div class="flabel">单通道旋转时的合束功率</div>
+  $$P(\Phi_i)=\left|\,\mathbf{E}_{\mathrm{others}}+\mathbf{E}_i e^{j\Phi_i}\,\right|^2$$</div>
+  <p>当 $\mathbf{E}_i$ 与 $\mathbf{E}_{\mathrm{others}}$ 同向时 $P$ 取最大值。本平台「REV 校准」仿真绘制某通道相位在 $0\sim2\pi$ 旋转时的合束功率正弦曲线，并自动定位最优相位。</p>
+
+  <h2>四、到达角检测（QD）</h2>
+  <p>入射光经焦距为 $f$ 的透镜会聚到四象限探测器（QD）光敏面，光斑质心为 $(x_c,y_c)$，其相对探测器中心的偏移反映入射光方向。方位角 $\alpha$、俯仰角 $\beta$ 为：</p>
+  <div class="formula"><div class="flabel">QD 测角（式 3、4）</div>
+  $$\alpha=\arctan\frac{x_c}{f+\Delta f},\qquad \beta=\arctan\frac{y_c}{f+\Delta f}$$</div>
+  <p>其中 $\Delta f$ 为光敏面相对透镜焦平面的轴向偏移。该模块角度测量范围 $6°\times6°$，角分辨率 $0.05°$，实测检测精度达 $0.023°$。</p>
+
+  <h2>五、波束质量：PSLR 与发散角</h2>
+  <p><strong>峰值旁瓣比（PSLR）</strong>定义为主瓣峰值功率与最高旁瓣峰值功率之比：</p>
+  <div class="formula"><div class="flabel">PSLR（式 5）</div>
+  $$\mathrm{PSLR}=20\log_{10}\!\left(\frac{A_{\mathrm{peak}}}{A_{\mathrm{sidelobe}}}\right)$$</div>
+  <p>文献实测主瓣 PSLR 在 <strong>12.09 ~ 18.11 dB</strong> 之间，均高于 12 dB。高斯光束的远场发散半角（束腰处）为：</p>
+  <div class="formula"><div class="flabel">高斯光束发散角（式 6）</div>
+  $$\theta=\frac{\lambda}{\pi w_0}$$</div>
+  <p>$w_0$ 为束腰 $1/e^2$ 半径。文献实测方位全发散约 $0.15°$、俯仰约 $0.07°$。</p>
+
+  <h2>六、上升时间与闭环带宽</h2>
+  <p>上升时间 $t_r$ 定义为光电探测器信号从稳态值的 <strong>10% 上升到 90%</strong> 的时间。系统带宽与上升时间的经验关系为：</p>
+  <div class="formula"><div class="flabel">带宽—上升时间（式 7）</div>
+  $$BW=\frac{0.35}{t_r}$$</div>
+  <p>实验中波长维切换上升时间 $45.45\,\mu\mathrm{s}$、相位维 $59.69\,\mu\mathrm{s}$，对应带宽约 <strong>5.8 kHz</strong>；考虑 FPGA 最快响应后，理论闭环带宽预计大于 2.5 kHz，优于传统机械快反镜（FSM）方案。</p>
+
+  <h2>七、关键参数与实验结果</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>项目</th><th>参数 / 结果</th><th>项目</th><th>参数 / 结果</th></tr>
+    <tr><td>OPA 阵元数</td><td class="mono">512</td><td>工作波长</td><td class="mono">1525–1575 nm</td></tr>
+    <tr><td>光栅周期 Λ</td><td class="mono">0.68 μm</td><td>有效折射率 n_eff</td><td class="mono">2.98</td></tr>
+    <tr><td>楔形棱镜角</td><td class="mono">10°</td><td>QD 带宽</td><td class="mono">30 kHz</td></tr>
+    <tr><td>跟踪视场</td><td class="mono">5° × 5°</td><td>闭环跟踪 RMSE</td><td class="mono">0.024°</td></tr>
+    <tr><td>方位上升时间</td><td class="mono">&lt; 60 μs</td><td>俯仰上升时间</td><td class="mono">&lt; 46 μs</td></tr>
+    <tr><td>波长切换速率</td><td class="mono">1 kHz</td><td>估算闭环带宽</td><td class="mono">&gt; 2.5 kHz</td></tr>
+    <tr><td>信标波长 / 功率</td><td class="mono">905 nm / 30 mW</td><td>链路距离</td><td class="mono">2 m（实验）</td></tr>
+  </table></div>
+  <div class="note green"><strong>结论：</strong>该集成 OPA-PAT 闭环系统在 5°×5° 视场内实现 RMSE 0.024° 的高精度跟踪，波束上升时间小于 60 μs、计算闭环带宽大于 2.5 kHz，具有低复杂度、小体积、机械无惯性等优势，在 LEO 卫星宽带接入中有广阔前景。</div>
+ </div>
+</div>
+
+<!-- ANCHOR-GUIDE -->
+<!-- ================= 使用说明 ================= -->
+<div class="tab-pane" id="pane-guide">
+ <div class="docs-body">
+  <h2>模块 1 使用说明</h2>
+  <p>本模块把文献的 PAT 系统拆成 <strong>5 个可交互仿真</strong>：① 二维波束主工作台；② REV 校准；③ QD 测角；④ 闭环跟踪；⑤ 波束质量与带宽。所有参数均在浏览器本地实时计算，无需联网后端（首次加载需联网获取 ECharts/KaTeX）。</p>
+
+  <h3>界面布局</h3>
+  <ul>
+    <li><strong>左侧控制面板：</strong>设置阵元数、间距、波长、方位/俯仰角、相位误差等；</li>
+    <li><strong>右上二维光斑：</strong>实时显示方位×俯仰远场光斑，光斑随角度移动；</li>
+    <li><strong>右中方向图：</strong>方位（相位）与俯仰（波长）两个切面曲线；</li>
+    <li><strong>下方三卡：</strong>REV、QD、闭环跟踪三个过程仿真；最下方为波束质量与带宽。</li>
+  </ul>
+
+  <h3>仿真 ① · 二维波束扫描</h3>
+  <div class="steps">
+    <div class="step-card"><div><h4>选择阵列规模</h4><p>在「阵元数量 N」下拉选择 64 / 128 / 256 / 512。N 越大主瓣越窄、旁瓣越多，512 对应文献原型。</p></div></div>
+    <div class="step-card"><div><h4>调节方位角 φ</h4><p>拖动「方位角 φ」滑块（−30°~30°），观察光斑水平移动、方位方向图主瓣跟随；这是<strong>相位控制</strong>。</p></div></div>
+    <div class="step-card"><div><h4>调节俯仰角 θ</h4><p>拖动「俯仰角 θ」滑块（−2.5°~2.5°），光斑垂直移动；这是<strong>波长控制</strong>，同时可微调「工作波长 λ」。</p></div></div>
+    <div class="step-card"><div><h4>观察制造误差影响</h4><p>打开「加入相位制造误差」开关并调大误差幅度，可见主瓣展宽、旁瓣抬升、PSLR 下降——这正是需要 REV 校准的原因。</p></div></div>
+  </div>
+  <div class="note"><strong>预期：</strong>读数区方位/俯仰主瓣角与滑块一致；N=512、d=3 μm 时方位 HPBW 约 0.2° 量级，PSLR 理想值约 13 dB。</div>
+
+  <h3>仿真 ② · REV 旋转电场矢量校准</h3>
+  <ol>
+    <li>用「校准通道」滑块选择待校准通道（演示前 16 个）；</li>
+    <li>点「单步」逐点旋转该通道相位，或点「自动校准」连续扫描 $0\to2\pi$；</li>
+    <li>观察合束功率正弦曲线，红点自动停在<strong>功率最大</strong>处，日志给出该通道最优相位；</li>
+    <li>逐通道重复即可完成整阵校准（原型对全部 512 通道执行）。</li>
+  </ol>
+
+  <h3>仿真 ③ · QD 四象限测角</h3>
+  <ol>
+    <li>拖动 x<sub>c</sub>、y<sub>c</sub> 滑块移动四象限上的光斑（也可理解为光斑质心偏移）；</li>
+    <li>四个象限的明暗随光斑位置变化；</li>
+    <li>右下实时给出由 $\alpha=\arctan(x_c/(f+\Delta f))$、$\beta=\arctan(y_c/(f+\Delta f))$ 计算的到达角。</li>
+  </ol>
+
+  <h3>仿真 ④ · 闭环跟踪（核心）</h3>
+  <ol>
+    <li>用「扰动幅度」设置目标抖动幅度（0.2°~2.5°）；</li>
+    <li>点「运行」：橙色十字为<strong>真实目标位置</strong>（随机+周期抖动），青色光圈为 OPA 指向；</li>
+    <li>系统经 QD 检测误差并驱动 OPA 校正，OPA 光圈快速逼近并咬住目标；</li>
+    <li>观察「跟踪 RMSE」，稳态应明显小于扰动幅度，文献值为 0.024°。点「复位」清零。</li>
+  </ol>
+  <div class="note amber"><strong>提示：</strong>本仿真用一阶惯性+比例控制近似闭环动态，时间轴做了放慢以便观察；RMSE 为演示量级，趋势与文献一致。</div>
+
+  <h3>仿真 ⑤ · 波束质量与带宽</h3>
+  <ul>
+    <li>调节「束腰半径 w₀」，高斯远场发散半角 $\theta=\lambda/(\pi w_0)$ 随之变化，与文献实测全发散 ≈0.07° 对照；</li>
+    <li>右侧阶跃响应展示 10%–90% 上升沿，读数给出 $t_r$ 与 $BW=0.35/t_r$（默认 $t_r=45.45\,\mu$s → 5.8 kHz）。</li>
+  </ul>
+
+  <h3>参数速查</h3>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>控件</th><th>含义</th><th>文献取值</th></tr>
+    <tr><td>N</td><td>相控阵阵元数</td><td class="mono">512</td></tr>
+    <tr><td>d</td><td>阵元间距</td><td class="mono">典型 2–4 μm</td></tr>
+    <tr><td>λ</td><td>工作波长</td><td class="mono">1550 nm（信标 905 nm）</td></tr>
+    <tr><td>φ / θ</td><td>方位 / 俯仰角</td><td class="mono">视场 5°×5°</td></tr>
+    <tr><td>误差幅度</td><td>阵元相位随机误差 rms</td><td class="mono">校准前存在，校准后消除</td></tr>
+    <tr><td>扰动幅度</td><td>目标抖动角幅度</td><td class="mono">≈ 2.5° 测试圆</td></tr>
+  </table></div>
+
+  <h3>常见问题</h3>
+  <ul>
+    <li><strong>图表空白？</strong>请确认联网加载 ECharts，并用 Live Server / http.server 打开（勿直接双击 file://）。</li>
+    <li><strong>N=512 卡顿？</strong>属正常，实时重算量较大；可改用 256/128 获得更流畅体验。</li>
+    <li><strong>公式显示为源码？</strong>KaTeX 未加载，刷新页面或检查网络即可。</li>
+  </ul>
+ </div>
+</div>
+
+<div class="tab-pane" id="pane-scene3d">
+  <div class="wrap" style="max-width:none;padding:20px 26px">
+    <div id="m1-scene"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../assets/js/scene3d.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  const P = window.OPA;
+  // 固定种子随机，保证相位误差可复现
+  function rng(seed) { return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }; }
+
+  /* ---------- 图表实例 ---------- */
+  const chAz = P.makeChart('m1-chart-az'), chEl = P.makeChart('m1-chart-el');
+  const chRev = P.makeChart('m1-chart-rev'), chBw = P.makeChart('m1-chart-bw');
+
+  /* ---------- 读取参数 ---------- */
+  function par() {
+    return {
+      N: +document.getElementById('m1-N').value,
+      d: +document.getElementById('m1-d').value * 1e-6,
+      lam: +document.getElementById('m1-lam').value * 1e-9,
+      az: +document.getElementById('m1-az').value,
+      el: +document.getElementById('m1-el').value,
+      errOn: document.getElementById('m1-err').checked,
+      errAmp: +document.getElementById('m1-erramp').value
+    };
+  }
+  let phaseErr = null;
+  function buildErr(N, amp) {
+    const r = rng(20250807), a = [];
+    for (let i = 0; i < N; i++) a.push((r() * 2 - 1) * amp * 1.4);
+    return a;
+  }
+
+  /* ---------- 主波束重绘 ---------- */
+  function drawEllipticSpot(cv, cx, cy, rx, ry, rgb, alpha) {
+    const ctx = cv.getContext('2d');
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(Math.max(0.05, rx / ry), 1);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, ry);
+    g.addColorStop(0, `rgba(${rgb},${alpha})`);
+    g.addColorStop(0.45, `rgba(${rgb},${alpha * 0.45})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, ry, 0, 7); ctx.fill(); ctx.restore();
+  }
+
+  function beam2dCanvas(x) {
+    const cv = document.getElementById('m1-beam2d');
+    P.fitCanvas(cv, 360);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    const FOV_AZ = 10, FOV_EL = 5; // 固定视场窗口 方位±5 俯仰±2.5
+    ctx.strokeStyle = 'rgba(60,80,120,.28)'; ctx.lineWidth = 1;
+    for (let g = 1; g < 10; g++) { ctx.beginPath(); ctx.moveTo(W * g / 10, 0); ctx.lineTo(W * g / 10, H); ctx.stroke(); }
+    for (let g = 1; g < 5; g++) { ctx.beginPath(); ctx.moveTo(0, H * g / 5); ctx.lineTo(W, H * g / 5); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(120,150,200,.4)';
+    ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    const cx = (x.az + 5) / FOV_AZ * W, cy = (2.5 - x.el) / FOV_EL * H;
+    const hpbw = P.hpbwUniform(x.lam, x.N, x.d);
+    let rx = Math.max(W * 0.022, hpbw / FOV_AZ * W * 1.1);
+    let ry = Math.max(H * 0.035, 0.07 / FOV_EL * H * 1.1);
+    if (x.errOn) {
+      rx *= (1 + x.errAmp * 1.3); ry *= (1 + x.errAmp);
+      drawEllipticSpot(cv, cx - rx * 2.1, cy + ry * 0.6, rx * 0.7, ry * 0.7, '120,180,230', .22);
+      drawEllipticSpot(cv, cx + rx * 2.0, cy - ry * 0.8, rx * 0.6, ry * 0.6, '120,180,230', .18);
+    }
+    drawEllipticSpot(cv, cx, cy, rx, ry, '90,235,240', .95);
+    ctx.fillStyle = 'rgba(160,180,210,.8)'; ctx.font = `${10 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText('-5°', 6, H - 8); ctx.fillText('方位 φ', W / 2 - 18, H - 8); ctx.fillText('+5°', W - 34, H - 8);
+    ctx.save(); ctx.translate(12, H / 2 + 20); ctx.rotate(-Math.PI / 2); ctx.fillText('俯仰 θ', 0, 0); ctx.restore();
+    ctx.fillStyle = 'rgba(246,185,66,.9)'; ctx.fillText(`主瓣 (${x.az.toFixed(1)}°, ${x.el.toFixed(2)}°)`, cx + 12, cy - 12);
+  }
+
+  function drawPatterns(x) {
+    const err = x.errOn ? buildErr(x.N, x.errAmp) : null;
+    // 方位（真实阵列因子）
+    const az = P.arrayFactor1D({
+      N: x.N, d: x.d, lambda: x.lam,
+      phases: P.linearPhases(x.N, x.az, x.d, x.lam, err).phases,
+      angMin: x.az - 1.6, angMax: x.az + 1.6, angStep: 0.01
+    });
+    const anAz = P.analyzePattern(az.ang, az.psi);
+    chAz.setOption({
+      xAxis: { name: '方位角 φ (°)', type: 'value', min: x.az - 1.6, max: x.az + 1.6 },
+      yAxis: { name: '增益 (dB)', min: -40, max: 3 },
+      series: [P.patternSeries(az.ang, az.db, '方位方向图', '#2fd7d7')]
+    }, true);
+
+    // 俯仰（光栅纵向，窄高斯主瓣，HPBW≈0.07）
+    const lo = x.el - 0.5, hi = x.el + 0.5, sg = 0.0252, angE = [], dbE = [];
+    for (let a = lo; a <= hi; a += 0.005) {
+      angE.push(+a.toFixed(3));
+      const g = Math.exp(-(a - x.el) * (a - x.el) / (2 * sg * sg));
+      dbE.push(Math.max(-45, 10 * Math.log10(g + 1e-9)));
+    }
+    chEl.setOption({
+      xAxis: { name: '俯仰角 θ (°)', type: 'value', min: lo, max: hi },
+      yAxis: { name: '增益 (dB)', min: -45, max: 3 },
+      series: [P.patternSeries(angE, dbE, '俯仰方向图', '#e26bd6')]
+    }, true);
+
+    // 读数
+    document.getElementById('m1-r-az').textContent = x.az.toFixed(2) + '°';
+    document.getElementById('m1-r-el').textContent = x.el.toFixed(2) + '°';
+    document.getElementById('m1-r-hb').textContent = anAz.fwhm.toFixed(3) + '°';
+    document.getElementById('m1-r-pslr').textContent = (x.errOn ? anAz.pslr.toFixed(1) : anAz.pslr.toFixed(1)) + ' dB';
+    document.getElementById('m1-q-pslr').textContent = anAz.pslr.toFixed(1) + ' dB';
+  }
+
+  function refresh() { const x = par(); beam2dCanvas(x); drawPatterns(x); }
+
+  /* ---------- REV 校准（16 子阵演示） ---------- */
+  const NREV = 16;
+  let revCh = 0, revPhi = 0, revInitErr = [], revRunning = false, revDone = [];
+  function revInit() {
+    const r = rng(99); revInitErr = [];
+    for (let i = 0; i < NREV; i++) revInitErr.push((r() * 2 - 1) * 1.6);
+    revDone = new Array(NREV).fill(null);
+  }
+  function revPower(ch, phi) {
+    let re = 0, im = 0;
+    for (let n = 0; n < NREV; n++) {
+      let ph = revInitErr[n];
+      if (revDone[n] != null) ph += revDone[n];
+      if (n === ch) ph += phi;
+      re += Math.cos(ph); im += Math.sin(ph);
+    }
+    return (re * re + im * im) / (NREV * NREV);
+  }
+  function drawRevCurve() {
+    const ph = [], pw = [];
+    for (let q = 0; q <= 360; q += 6) {
+      const rad = q * Math.PI / 180;
+      ph.push(q); pw.push(revPower(revCh, rad));
+    }
+    const cur = revPower(revCh, revPhi);
+    chRev.setOption({
+      xAxis: { name: '通道附加相位 (°)', type: 'value', min: 0, max: 360 },
+      yAxis: { name: '合束功率', type: 'value' },
+      series: [
+        { name: '功率', type: 'line', showSymbol: false, data: ph.map((q, i) => [q, pw[i]]), lineStyle: { color: '#4aa8ff', width: 2 }, smooth: true },
+        { name: '当前', type: 'scatter', data: [[revPhi * 180 / Math.PI, cur]], symbolSize: 13, itemStyle: { color: '#f6b942' } }
+      ]
+    }, true);
+  }
+  async function revAuto() {
+    if (revRunning) return;
+    revRunning = true;
+    const log = document.getElementById('m1-rev-log');
+    for (let c = 0; c < NREV; c++) {
+      revCh = c; revPhi = 0;
+      document.getElementById('m1-revch').value = c;
+      document.getElementById('m1-revch-txt').textContent = '#' + c;
+      let best = -1, bestPhi = 0;
+      for (let q = 0; q <= 360; q += 10) {
+        revPhi = q * Math.PI / 180;
+        const pw = revPower(c, revPhi);
+        if (pw > best) { best = pw; bestPhi = revPhi; }
+        drawRevCurve();
+        await P.sleep(8);
+      }
+      revPhi = bestPhi; revDone[c] = bestPhi;
+      P.logTo(log, `通道 #${c} 校准完成，补偿相位 ${(bestPhi * 180 / Math.PI).toFixed(0)}°，峰值 ${best.toFixed(3)}`);
+      drawRevCurve(); await P.sleep(40);
+    }
+    P.logTo(log, '全部 16 通道 REV 校准结束，主瓣已相干增强。');
+    revRunning = false;
+  }
+  function revStep() {
+    revPhi = (revPhi + Math.PI / 12) % (2 * Math.PI);
+    drawRevCurve();
+    if (Math.abs(revPhi) < 0.01) { /* 一圈 */ }
+  }
+
+  /* ---------- QD 测角 ---------- */
+  const fLens = 10; // mm
+  function drawQD() {
+    const cv = document.getElementById('m1-qd');
+    P.fitCanvas(cv, 210);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    const xc = +document.getElementById('m1-qdx').value;
+    const yc = +document.getElementById('m1-qdy').value;
+    // 四象限底色（随光斑亮度）
+    const half = 0.5 * 1e-3; // 归一化半宽
+    const px = (xc + 1) / 2, py = (yc + 1) / 2; // 0..1
+    const quad = [
+      [0, 0, (1 - py) * px + .25, 1 - px, 1 - py], // 占位，下面直接算
+    ];
+    function bright(cx, cy) { const d = Math.hypot(cx - px, cy - py); return Math.max(0, 1 - d * 1.6); }
+    const qs = [[.25, .25], [.75, .25], [.25, .75], [.75, .75]];
+    qs.forEach((q, i) => {
+      const b = bright(q[0], q[1]);
+      const gx = (i % 2) * W / 2, gy = Math.floor(i / 2) * H / 2;
+      ctx.fillStyle = `rgba(${30 + b * 60},${120 + b * 110},${150 + b * 90},${0.35 + b * 0.5})`;
+      ctx.fillRect(gx, gy, W / 2, H / 2);
+    });
+    // 分隔十字
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+    // 光斑
+    P.drawGaussianSpot(cv, px, py, 46 * dpr, '200,250,255', .95);
+    // 角度
+    const alpha = Math.atan(xc * 1.0 / fLens) * P.R2D;
+    const beta = Math.atan(yc * 1.0 / fLens) * P.R2D;
+    document.getElementById('m1-qd-alpha').textContent = alpha.toFixed(3) + '°';
+    document.getElementById('m1-qd-beta').textContent = beta.toFixed(3) + '°';
+  }
+
+  /* ---------- 闭环跟踪 ---------- */
+  const tcv = document.getElementById('m1-track');
+  let track = { run: false, t: 0, tx: 0, ty: 0, ox: 0, oy: 0, errs: [] };
+  function drawTrackScene() {
+    P.fitCanvas(tcv, 210);
+    const ctx = tcv.getContext('2d'), W = tcv.width, H = tcv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    // 网格
+    ctx.strokeStyle = 'rgba(60,80,120,.3)'; ctx.lineWidth = 1;
+    for (let g = 1; g < 6; g++) {
+      ctx.beginPath(); ctx.moveTo(W * g / 6, 0); ctx.lineTo(W * g / 6, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, H * g / 6); ctx.lineTo(W, H * g / 6); ctx.stroke();
+    }
+    const toPx = (a) => W / 2 + (a / 3) * W / 2;
+    const toPy = (a) => H / 2 + (a / 3) * H / 2;
+    // 目标（橙十字）
+    ctx.strokeStyle = '#f6b942'; ctx.lineWidth = 2.4 * dpr;
+    const X = toPx(track.tx), Y = toPy(track.ty), s = 9 * dpr;
+    ctx.beginPath(); ctx.moveTo(X - s, Y); ctx.lineTo(X + s, Y); ctx.moveTo(X, Y - s); ctx.lineTo(X, Y + s); ctx.stroke();
+    // OPA（青圆）
+    ctx.strokeStyle = '#2fd7d7'; ctx.lineWidth = 2 * dpr;
+    const OX = toPx(track.ox), OY = toPy(track.oy);
+    ctx.beginPath(); ctx.arc(OX, OY, 8 * dpr, 0, 7); ctx.stroke();
+    // 图例
+    ctx.font = `${10 * dpr}px 'JetBrains Mono'`;
+    ctx.fillStyle = '#f6b942'; ctx.fillText('+ 目标', 10 * dpr, 16 * dpr);
+    ctx.fillStyle = '#2fd7d7'; ctx.fillText('○ OPA', 10 * dpr, 32 * dpr);
+  }
+  function trackStep() {
+    if (!track.run) return;
+    const A = +document.getElementById('m1-dist').value;
+    track.t += 0.12;
+    track.tx = A * 0.7 * Math.sin(track.t * 1.3) + A * 0.4 * Math.sin(track.t * 0.5 + 1) + P.gaussRand() * A * 0.12;
+    track.ty = A * 0.6 * Math.cos(track.t * 0.9) + A * 0.35 * Math.sin(track.t * 1.7) + P.gaussRand() * A * 0.12;
+    // 一阶闭环（含检测噪声）
+    const K = 0.16;
+    track.ox += K * (track.tx - track.ox) + P.gaussRand() * 0.006;
+    track.oy += K * (track.ty - track.oy) + P.gaussRand() * 0.006;
+    const e = Math.hypot(track.tx - track.ox, track.ty - track.oy);
+    track.errs.push(e); if (track.errs.length > 200) track.errs.shift();
+    const rmse = Math.sqrt(track.errs.reduce((s, v) => s + v * v, 0) / track.errs.length);
+    document.getElementById('m1-rmse').textContent = rmse.toFixed(3) + '°';
+    document.getElementById('m1-ierr').textContent = e.toFixed(3) + '°';
+    drawTrackScene();
+  }
+  setInterval(trackStep, 40);
+
+  /* ---------- 波束质量 / 带宽 ---------- */
+  function drawQuality() {
+    const w0raw = +document.getElementById('m1-w0').value;
+    const w0 = w0raw / 10 / 1000; // mm -> m
+    P.setSliderText(document.getElementById('m1-w0'), (w0raw / 10).toFixed(1) + ' mm');
+    const lam = +document.getElementById('m1-lam').value * 1e-9;
+    const div = P.gaussDivergence(lam, w0);
+    document.getElementById('m1-q-div').textContent = div.toFixed(3) + '°';
+  }
+  function drawBw() {
+    const t = [], y1 = [], y2 = [];
+    const tr1 = 45.45, tr2 = 59.69;
+    for (let q = 0; q <= 130; q += 2) {
+      t.push(q);
+      y1.push(0.5 * P.erfc(-(q - tr1 / 2) / (tr1 / 2.56)));
+      y2.push(0.5 * P.erfc(-(q - tr2 / 2) / (tr2 / 2.56)));
+    }
+    chBw.setOption({
+      xAxis: { name: '时间 (μs)', type: 'value', min: 0, max: 130 },
+      yAxis: { name: '归一化功率', min: 0, max: 1.08 },
+      series: [
+        { name: '波长维 45.45μs', type: 'line', showSymbol: false, smooth: true, data: t.map((q, i) => [q, y1[i]]), lineStyle: { color: '#2fd7d7', width: 2 },
+          markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(246,185,66,.6)', type: 'dashed' }, data: [{ yAxis: .1 }, { yAxis: .9 }] } },
+        { name: '相位维 59.69μs', type: 'line', showSymbol: false, smooth: true, data: t.map((q, i) => [q, y2[i]]), lineStyle: { color: '#e26bd6', width: 2 } }
+      ]
+    }, true);
+  }
+
+  /* ---------- 事件绑定 ---------- */
+  ['m1-N', 'm1-d', 'm1-lam', 'm1-az', 'm1-el', 'm1-err', 'm1-erramp'].forEach(id =>
+    document.getElementById(id).addEventListener('input', refresh));
+  document.getElementById('m1-reset').addEventListener('click', () => {
+    document.getElementById('m1-d').value = 3; document.getElementById('m1-lam').value = 1550;
+    document.getElementById('m1-az').value = 0; document.getElementById('m1-el').value = 0;
+    document.getElementById('m1-err').checked = false; refresh();
+  });
+  document.getElementById('m1-rev-run').addEventListener('click', revAuto);
+  document.getElementById('m1-rev-step').addEventListener('click', revStep);
+  document.getElementById('m1-rev-reset').addEventListener('click', () => {
+    revInit(); revPhi = 0; P.clearLog(document.getElementById('m1-rev-log')); drawRevCurve();
+  });
+  document.getElementById('m1-revch').addEventListener('input', (e) => {
+    revCh = +e.target.value; revPhi = 0;
+    document.getElementById('m1-revch-txt').textContent = '#' + revCh; drawRevCurve();
+  });
+  ['m1-qdx', 'm1-qdy'].forEach(id => document.getElementById(id).addEventListener('input', drawQD));
+  document.getElementById('m1-dist').addEventListener('input', () => { });
+  document.getElementById('m1-track-run').addEventListener('click', () => {
+    track.run = !track.run;
+    const st = document.getElementById('m1-track-status');
+    st.className = 'pill-status ' + (track.run ? 'run' : '');
+    st.innerHTML = `<span class="b"></span>${track.run ? '跟踪中' : '已停止'}`;
+    document.getElementById('m1-track-run').textContent = track.run ? '暂停' : '运行';
+  });
+  document.getElementById('m1-track-reset').addEventListener('click', () => {
+    track = { run: false, t: 0, tx: 0, ty: 0, ox: 0, oy: 0, errs: [] };
+    document.getElementById('m1-rmse').textContent = '—';
+    document.getElementById('m1-ierr').textContent = '—';
+    const st = document.getElementById('m1-track-status'); st.className = 'pill-status';
+    st.innerHTML = '<span class="b"></span>未运行';
+    document.getElementById('m1-track-run').textContent = '运行';
+    drawTrackScene();
+  });
+  document.getElementById('m1-w0').addEventListener('input', drawQuality);
+
+  /* ---------- 初始化 ---------- */
+  P.setupTabs();
+  if (window.OPA3D) window.OPA3D.mount(document.getElementById('m1-scene'),
+    { mode: 'm1', nOPA: 4, beamColor: 0x2fd7d7, title: 'PAT 闭环 · 多 OPA 协同跟踪' });
+  revInit(); drawRevCurve(); drawQD(); drawTrackScene(); drawQuality(); drawBw(); refresh();
+  P.renderMath(document.getElementById('pane-theory'));
+  P.renderMath(document.getElementById('pane-guide'));
+})();
+</script>
+</body>
+</html>
