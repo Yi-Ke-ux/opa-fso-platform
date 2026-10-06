@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实现路径 | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home active" href="../index.html">首页</a>
+    <a href="../modules/module1-pat.html">M1</a><a href="../modules/module2-multiwavelength.html">M2</a>
+    <a href="../modules/module3-deeplearning.html">M3</a><a href="../modules/module4-monolithic.html">M4</a>
+    <a href="../modules/module5-algorithms.html">M5</a><a href="../modules/module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 实现路径</div>
+  <h1>OPA-FSO 仿真平台 · 实现路径（开发文档）</h1>
+  <div class="tags"><span class="tag cyan">原生 HTML/CSS/JS</span><span class="tag amber">多文件 · 可扩展</span></div>
+</section>
+
+<div class="wrap" style="max-width:980px">
+ <div class="docs-body">
+
+  <h2>一、总体架构</h2>
+  <p>平台为<strong>纯静态、多文件、无构建</strong>的前端项目：不用 React/Vue、不用打包器、无后端与数据库。所有物理计算在浏览器本地完成。技术选型：</p>
+  <ul>
+    <li><strong>ECharts 5.5.0</strong>：方向图、收敛曲线、BER、时序、柱状等所有二维坐标图；</li>
+    <li><strong>Canvas 2D</strong>：光斑、热图、眼图、扫描帧动画；</li>
+    <li><strong>KaTeX 0.16.11</strong>：理论公式排版（$...$、$$...$$）；</li>
+    <li>三者均经 <strong>jsDelivr CDN</strong> 引入，字体经自托管镜像，无需本地依赖。</li>
+  </ul>
+
+  <h2>二、目录结构</h2>
+<pre class="mono" style="background:#0c1322;border:1px solid #22304f;border-radius:10px;padding:16px;overflow:auto;font-size:12.5px;line-height:1.65;color:#b9c9e8">opa-fso-platform/
+├── index.html                     # 平台首页（Hero + 6 模块卡片 + 快速开始）
+├── assets/
+│   ├── css/
+│   │   └── style.css              # 全局深色主题、布局、控件、表格、响应式
+│   └── js/
+│       ├── common.js              # 公共物理引擎 + ECharts/Canvas/UI 工具库
+│       └── scene3d.js             # 可复用 Three.js 三维场景引擎（window.OPA3D.mount）
+├── modules/
+│   ├── module1-pat.html           # M1 PAT 捕获-瞄准-跟踪闭环
+│   ├── module2-multiwavelength.html# M2 多波长 Fresnel 相干波束合成
+│   ├── module3-deeplearning.html  # M3 深度学习 DNN 相位校准
+│   ├── module4-monolithic.html    # M4 单片集成端射 OPA
+│   ├── module5-algorithms.html    # M5 相位控制算法（爬山 vs 遗传）
+│   ├── module6-highspeed.html     # M6 高速二维扫描控制
+│   └── _shots/                    # 自检截图（非交付物，可忽略）
+└── docs/
+    ├── 使用说明书.html
+    └── 实现路径.html              # 本文件
+</pre>
+
+  <h2>三、文件职责</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th style="width:26%">文件</th><th>职责</th></tr>
+    <tr><td class="mono">index.html</td><td>平台入口与导航中枢，展示模块矩阵与运行指引</td></tr>
+    <tr><td class="mono">style.css</td><td>设计令牌（配色/字号）、topbar、workbench、panel、滑块、按钮、表格、docs-body、响应式断点</td></tr>
+    <tr><td class="mono">common.js</td><td>以 IIFE 挂载 window.OPA，提供全部可复用物理函数与绘图/UI 工具</td></tr>
+    <tr><td class="mono">scene3d.js</td><td>以 IIFE 挂载 window.OPA3D；用 Three.js 建模 OPA / 无人机 / 障碍物，光束 Raycaster 遮挡检测、目标轨迹、链路功率 / BER 与模块专属指标；各模块以差异化 config 调用 mount</td></tr>
+    <tr><td class="mono">moduleN-*.html</td><td>每个模块独立页面，含仿真 / 三维场景 / 理论 / 说明四个 tab，内联该模块专属脚本</td></tr>
+  </table></div>
+
+  <h2>四、公共物理引擎 common.js</h2>
+  <p>通过 <span class="mono">const P = window.OPA;</span> 使用，函数分组如下：</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th style="width:22%">分组</th><th>函数</th></tr>
+    <tr><td>常量/基础</td><td class="mono">D2R, R2D, C0, sinc, erfc, qfunc, dbA, dbP</td></tr>
+    <tr><td>一维相控阵</td><td class="mono">linearPhases, arrayFactor1D, steeredPattern, steerToDphi, dphiToSteer</td></tr>
+    <tr><td>波束宽度/视场</td><td class="mono">fovEdge, hpbwUniform, nullToNull</td></tr>
+    <tr><td>光栅天线</td><td class="mono">gratingAngle, gratingAngleV2, gratingPeriod</td></tr>
+    <tr><td>高斯光束</td><td class="mono">gaussDivergence, gaussIntensity</td></tr>
+    <tr><td>方向图分析</td><td class="mono">analyzePattern（peakAng / fwhm / pslr）</td></tr>
+    <tr><td>通信链路</td><td class="mono">berFromPower, powerSweep, eyeTrace, gaussRand</td></tr>
+    <tr><td>二维阵列</td><td class="mono">arrayFactor2D</td></tr>
+    <tr><td>ECharts 封装</td><td class="mono">makeChart, patternSeries</td></tr>
+    <tr><td>Canvas</td><td class="mono">heatColor, renderHeatmap, clearCanvas, drawGaussianSpot, fitCanvas</td></tr>
+    <tr><td>UI 工具</td><td class="mono">setupTabs, bindSlider, setSliderText, logTo, clearLog, sleep, renderMath</td></tr>
+  </table></div>
+
+  <h3>单位约定（重要）</h3>
+  <ul>
+    <li><span class="mono">arrayFactor1D / steeredPattern / linearPhases</span> 中 <strong>d 与 lambda 必须同单位</strong>，脚本统一转成米（μm×1e-6、nm×1e-9）；</li>
+    <li>角度对外用<strong>度</strong>，函数内部用 D2R 转弧度；</li>
+    <li><span class="mono">arrayFactor1D</span> 返回 psi 已除以 N（主瓣≈1），db 为相对峰值归一化；</li>
+    <li><span class="mono">drawGaussianSpot(canvas, cx, cy, r, 'r,g,b', alpha)</span> 的 cx/cy 为 0~1 归一化坐标。</li>
+  </ul>
+
+  <h2>五、各模块实现要点</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th style="width:8%">模块</th><th>物理模型</th><th>关键交互/算法</th></tr>
+    <tr><td class="mono">M1</td><td>相位控方位 + 波长控俯仰；QD 四象限测角</td><td>REV 旋转校准、PAT 闭环动画、阶跃响应/带宽</td></tr>
+    <tr><td class="mono">M2</td><td>Fresnel 相干波束合成（CBC），余弦²干涉</td><td>PLL 锁相（低通/高通噪声）、BER 扫描、眼图</td></tr>
+    <tr><td class="mono">M3</td><td>电压(16)↔波束(41) 的前向/逆向映射</td><td>浏览器内真实 MLP + Adam 训练、逆向设计、爬山对比 SMSR</td></tr>
+    <tr><td class="mono">M4</td><td>端射线阵：FOV(式1)、HPBW(式2)、WGA(式3)</td><td>HPBW-N 曲线、纵向波长扫描、辐射效率热图、TWE-MZM 眼图</td></tr>
+    <tr><td class="mono">M5</td><td>64 通道相位优化，目标角远场强度为适应度</td><td>逐通道 duty 爬山 vs Logistic 混沌 GA，评估次数/时间对比</td></tr>
+    <tr><td class="mono">M6</td><td>电光 p-n 移相(式1/2)，横向相位+纵向波长</td><td>FPGA RAM→DAC 时序、5×5 帧(式5)、SPGD、电光 vs 热光</td></tr>
+  </table></div>
+
+  <h2>六、页面生命周期 / 数据流</h2>
+  <ol>
+    <li><strong>加载：</strong>CDN 脚本与 common.js 就绪；</li>
+    <li><strong>初始化：</strong>内联 IIFE 中 makeChart 建图、读取控件初值、调用各 draw* 首次渲染；</li>
+    <li><strong>交互：</strong>滑块 input / 按钮 click → 读取参数 → 物理函数计算 → setOption / Canvas 重绘 → 更新读数；</li>
+    <li><strong>异步：</strong>训练/动画用 async/await + sleep 分片，避免阻塞主线程；</li>
+    <li><strong>切 tab：</strong>setupTabs 切换 pane 并触发 resize 让 ECharts 重新适配。</li>
+  </ol>
+
+  <h2>七、如何新增一个模块（扩展指南）</h2>
+  <ol>
+    <li>复制任一 <span class="mono">moduleN-*.html</span> 为 <span class="mono">module7-xxx.html</span>；</li>
+    <li>修改标题、文献信息、标签，把导航中 active 状态移到新页（并在 index.html 增加卡片、topbar 增加入口）；</li>
+    <li>在“交互仿真”里放置控件（给滑块唯一 id）与图表容器（div.chart-box / canvas）；</li>
+    <li>在内联 &lt;script&gt; 中：<span class="mono">const P=window.OPA;</span> 建图、写 draw 函数、addEventListener 绑定、末尾调用 setupTabs() 与首次渲染；</li>
+    <li>通用物理优先复用 common.js；专属算法写在模块内联脚本里；</li>
+    <li>按第九节做验证。</li>
+  </ol>
+  <div class="note"><strong>约定：</strong>所有按钮必须绑定真实 handler（禁止僵尸按钮）；所有 id 全局唯一；文件名语义化。</div>
+
+  <h2>八、如何修改参数 / 样式</h2>
+  <ul>
+    <li><strong>默认参数：</strong>改各模块 HTML 控件的 value/min/max；</li>
+    <li><strong>配色/字体/间距：</strong>集中在 style.css 顶部的 CSS 变量（:root）；</li>
+    <li><strong>物理常数/标定：</strong>如 BER 灵敏度斜率在 common.js <span class="mono">berFromPower</span>；</li>
+    <li><strong>新增公共函数：</strong>写在 common.js 并加入末尾 <span class="mono">global.OPA={...}</span> 导出列表。</li>
+  </ul>
+
+  <h2>九、本地验证方法</h2>
+  <ol>
+    <li><strong>语法检查：</strong>把页面内联脚本抽出后用 <span class="mono">node --check</span>（平台根目录提供 extract_check.py：<span class="mono">python ../extract_check.py 模块.html</span>）；</li>
+    <li><strong>页面自检：</strong>用 html skill 的 shot.py 生成桌面/移动截图，核对 consoleErrors 与渲染；</li>
+    <li><strong>手动核对：</strong>Live Server 打开，F12 看 Console 无报错，拖动每个控件确认图表响应；</li>
+    <li><strong>数值核对：</strong>典型值（如 16 阵元 d=3μm 指向 8°：peakAng=8.00、HPBW=1.66°、PSLR=13.15 dB）。</li>
+  </ol>
+
+  <h2>十、部署建议</h2>
+  <ul>
+    <li>平台为纯静态，可直接放到任意静态服务器 / GitHub Pages / Gitee Pages / 校园网静态空间；</li>
+    <li>保持相对路径与目录结构，无需后端；</li>
+    <li>如需完全离线，可把 ECharts/KaTeX/字体下载到 assets 并改为本地引用。</li>
+  </ul>
+
+  <div class="note green"><strong>设计要点回顾：</strong>“公共物理引擎下沉 common.js + 模块差异内联 + 统一三标签结构”，使平台既能保证物理一致性，又便于逐模块复现与后续扩展。</div>
+
+  <p style="margin-top:30px"><a class="btn" href="../index.html">返回首页</a>
+  <a class="btn ghost" href="使用说明书.html" style="margin-left:10px">查看《使用说明书》</a></p>
+ </div>
+</div>
+<br><br>
+</body>
+</html>
