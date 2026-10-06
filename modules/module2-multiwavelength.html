@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M2 · 多波长 OPA 菲涅耳相干合成 | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home" href="../index.html">首页</a>
+    <a href="module1-pat.html">M1</a>
+    <a class="active" href="module2-multiwavelength.html">M2</a>
+    <a href="module3-deeplearning.html">M3</a>
+    <a href="module4-monolithic.html">M4</a>
+    <a href="module5-algorithms.html">M5</a>
+    <a href="module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 模块 02</div>
+  <h1>基于多波长光学相控阵菲涅耳反射的自由空间光通信</h1>
+  <div class="src">Haraguchi E., Ono H., Suzuki T., et al. "Free space optical communication based on a multi-wavelength optical phased array using Fresnel reflection." <em>Applied Physics Express</em>, Vol.18, 012004, Jan. 2025.</div>
+  <div class="tags">
+    <span class="tag cyan">2 单元相干波束合成 CBC</span><span class="tag">3 波长 DWDM</span>
+    <span class="tag magenta">PLL 锁相环 20 kHz</span><span class="tag amber">2.8 Gbps · 5.6 Gbps FSO</span>
+    <span class="tag">菲涅耳反射回波</span>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-target="pane-sim">交互仿真</button>
+  <button class="tab-btn" data-target="pane-theory">理论分析</button>
+  <button class="tab-btn" data-target="pane-guide">使用说明</button>
+  <button class="tab-btn" data-target="pane-scene3d">三维场景</button>
+</div>
+
+<!-- ================= 交互仿真 ================= -->
+<div class="tab-pane active" id="pane-sim">
+
+  <!-- 主工作台：相干波束合成 -->
+  <div class="workbench">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>相干波束合成（CBC）参数</h4>
+        <div class="ctrl"><label>合成单元数 <span class="val"></span></label>
+          <select id="m2-units"><option>1</option><option selected>2</option><option>4</option></select></div>
+        <div class="ctrl"><label>准直器间距 d <span class="val"></span></label>
+          <input type="range" id="m2-d" min="0.5" max="3" step="0.1" value="1.5"></div>
+        <div class="ctrl"><label>相邻相位差 Δφ <span class="val"></span></label>
+          <input type="range" id="m2-dphi" min="-3.14" max="3.14" step="0.02" value="0"></div>
+        <div class="ctrl"><label>工作波长（DWDM 通道）<span class="val"></span></label>
+          <select id="m2-lam">
+            <option value="1545.34">ch40 · 1545.34 nm（信号 LD#2）</option>
+            <option value="1548.52">ch36 · 1548.52 nm（信号 LD#1）</option>
+            <option value="1550.12" selected>ch34 · 1550.12 nm（参考）</option>
+          </select></div>
+        <div class="switch-row">加入相位失配误差
+          <label class="switch"><input type="checkbox" id="m2-mis"><span class="slider-sw"></span></label></div>
+        <div class="ctrl"><label>失配幅度（弧度 rms）<span class="val"></span></label>
+          <input type="range" id="m2-misamp" min="0.1" max="1.5" step="0.05" value="0.6"></div>
+      </div>
+      <div class="panel">
+        <h4><span class="dot"></span>合成读数</h4>
+        <div class="metrics">
+          <div class="metric"><div class="ml">扫描角 θ</div><div class="mv cyan" id="m2-r-ang">—</div></div>
+          <div class="metric"><div class="ml">CBC 合成效率</div><div class="mv green" id="m2-r-eff">—</div></div>
+          <div class="metric"><div class="ml">理想功率增益</div><div class="mv amber" id="m2-r-gain">—</div></div>
+          <div class="metric"><div class="ml">主瓣零点宽</div><div class="mv" id="m2-r-w">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>多单元远场干涉方向图（横轴：角度 mrad）</h4>
+        <div class="chart-box tall" id="m2-chart-cbc"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" style="max-width:none;padding:0 26px">
+    <div class="stage-grid two">
+      <!-- PLL -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>PLL 锁相环：相位噪声与锁定</h4>
+        <div class="chart-box" id="m2-chart-pn" style="height:230px"></div>
+        <div class="ctrl" style="margin-top:8px"><label>PLL 环路带宽 <span class="val"></span></label>
+          <input type="range" id="m2-pllbw" min="2" max="100" step="2" value="20"></div>
+        <div class="btn-row">
+          <button class="btn sm primary" id="m2-lock">重新锁定</button>
+          <span class="pill-status" id="m2-lock-st"><span class="b"></span>已锁定</span></div>
+      </div>
+      <!-- Fresnel -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>菲涅耳反射（GRIN 透镜界面）</h4>
+        <div class="canvas-box"><canvas id="m2-fres" style="height:150px"></canvas></div>
+        <div class="ctrl" style="margin-top:8px"><label>透镜折射率 n₂ <span class="val"></span></label>
+          <input type="range" id="m2-n2" min="1.3" max="2" step="0.01" value="1.52"></div>
+        <div class="switch-row">AR 增透膜
+          <label class="switch"><input type="checkbox" id="m2-ar"><span class="slider-sw"></span></label></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">界面反射率 R</div><div class="mv amber" id="m2-r-r">—</div></div>
+          <div class="metric"><div class="ml">回波损耗</div><div class="mv cyan" id="m2-r-rl">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-grid two" style="margin-top:20px">
+      <!-- BER -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>BER — 接收功率（2.8 Gbps）</h4>
+        <div class="chart-box" id="m2-chart-ber" style="height:300px"></div>
+      </div>
+      <!-- 眼图 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>接收眼图</h4>
+        <div class="canvas-box"><canvas id="m2-eye" style="height:230px"></canvas></div>
+        <div class="ctrl" style="margin-top:8px"><label>链路 SNR <span class="val"></span></label>
+          <input type="range" id="m2-snr" min="6" max="24" step="1" value="16"></div>
+        <div class="metrics">
+          <div class="metric"><div class="ml">估算 BER</div><div class="mv amber" id="m2-r-ber">—</div></div>
+          <div class="metric"><div class="ml">眼开度</div><div class="mv green" id="m2-r-eye">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <br><br>
+</div>
+
+<!-- ================= 理论分析 ================= -->
+<div class="tab-pane" id="pane-theory">
+ <div class="docs-body">
+  <h2>一、多波长 OPA 与相干波束合成思路</h2>
+  <p>自由空间光通信（FSO）相比射频具有数据率高、天线尺寸小、低功耗、无需频谱许可等优势，但单模光纤的输出功率受非线性、表面烧损、模场布里渊散射限制（约 1 mW）。<strong>相干波束合成（Coherent Beam Combining, CBC）</strong>通过把多个激光器锁相为相干阵列，可在突破单纤功率极限的同时实现亮度（brightness）缩放，并保留单模光束的光谱与空间特性。</p>
+  <p>文献提出并演示了一套<strong>基于多波长 OPA、利用菲涅耳反射</strong>的 FSO 发射机：以一个单偏振参考激光器（ch34）作为相位检测的参考光，两个单偏振信号激光器（ch36、ch40）承载通信数据；通过<strong>在每个阵元处做菲涅耳反射与本地光路径差检测</strong>，结合作为种子光的参考波长，获得叠加通信波长的参考信号，从而避免对超弱通信信号直接做相位检测。</p>
+
+  <h2>二、光束扫描角</h2>
+  <p>准直器阵列由 GRIN 透镜构成，回束（return path）由 GRIN 透镜与空气界面折射率差引起的菲涅耳反射（non-AR）产生。相邻准直器间距 $d=1.5\,\mathrm{mm}$，相邻光束相位差 $\Delta\phi$，波数 $k_0=2\pi/\lambda$，则光束扫描角：</p>
+  <div class="formula"><div class="flabel">扫描角（式 1）</div>
+  $$\sin\theta=\frac{\Delta\phi}{k_0 d}$$</div>
+  <p>相邻阵元相位差取 $\pi$ 时，参考激光（ch34）扫描角为 <strong>516.7 μrad</strong>，Tx-LD#1（ch36）516.0 μrad、Tx-LD#2（ch40）515.1 μrad；参考与信号激光频率差导致的扫描角差仅 <strong>1.6 μrad（0.3%）</strong>，可忽略，说明多波长耦合不劣化光束指向。</p>
+
+  <h2>三、多波长 DWDM 与菲涅耳反射参考光路</h2>
+  <p>参考激光为线宽 100 kHz（ITU-GRID ch34），单管 DFB-LD 输出 +3 dBm、波长 1550.12 nm；两信号波长为 1548.52 nm（ch36 ITU-GRID 36）与 1545.34 nm（ch40）。信号经 LiNbO₃ 马赫-曾德调制器（MZM）以长度 $2^{31}-1$ 的 PRBS 调制到 2.8 Gbps。三波长经 DWDM（ch36/ch40）合波后均分进入两个光信号链路。</p>
+  <p>本地光经光耦合器与工作在频移 $\phi_{fs}$ 的 OPS（光频移器）相连，EDFA 放大至 +30 dBm，再经保偏环形器输出为平行光；菲涅耳反射光（CIR）由 GRIN 透镜端面（non-AR，回波约 −20 dB）反射回环形器。该<strong>菲涅耳回波天然携带阵元的本地光路径差信息</strong>，是相位检测的关键。</p>
+
+  <h2>四、PLL 锁相环相位控制</h2>
+  <p>PD 接收的信号送入锁相环（PLL），检测信号光束与主振荡器之间的相位误差并反馈给 OFS。该 PLL 为<strong>模拟锁相环</strong>，含 20 kHz 环路带宽的 PD、环路滤波器与压控振荡器（VCO），相位控制通过接在 OPS 上的射频移相器实现。由于光程由往返光程构成、PLL 精度受光程限制，光泄漏低于 30 dB。</p>
+  <p>开环时相位噪声高、远场光斑（FFP）为弥散单斑；闭环锁定后相位噪声在环路带宽内被显著抑制，两阵元光斑干涉形成清晰条纹，CBC 效率提升。本平台 PLL 仿真绘制<strong>开环 / 闭环相位噪声频域曲线</strong>，并演示相位误差的锁定收敛过程。</p>
+
+  <h2>五、CBC 合成效率</h2>
+  <p>$M$ 个阵元理想相干合成时，远场主瓣峰值场强为单阵元的 $M$ 倍、峰值强度为 $M^2$，总发射功率为 $M$。定义合成效率：</p>
+  <div class="formula"><div class="flabel">CBC 效率</div>
+  $$\eta_{\mathrm{CBC}}=\frac{\left|\sum_{m=1}^{M} e^{j\delta_m}\right|^2}{M^2}$$</div>
+  <p>$\delta_m$ 为各阵元相对理想相位的残余相位误差。相位完全锁定时 $\eta=1$（0 dB 损耗）；存在失配时效率下降。</p>
+
+  <h2>六、BER 与眼图结果</h2>
+  <p>信号接收示波器与 BER 测试系统（BERTS）测量误码率。文献比较了<strong>单阵元（single OPA element）</strong>与<strong>双阵元（two OPA elements）</strong>在平均每阵元接收功率口径下的 BER：两者与 Rsoft 仿真结果一致、<strong>无明显差异</strong>，表明多波长合成与菲涅耳相位检测不劣化通信质量。回路上 90% 的退化主要来自相对倾斜误差，而非相位失配。</p>
+  <div class="note green"><strong>结论：</strong>该两单元三波长多波长 OPA 实现 5.6 Gbps FSO（单波长 2.8 Gbps），PLL 锁定后无通信质量劣化、无抖动伪影，验证了多波长 CBC + 菲涅耳反射方案的有效性。</div>
+
+  <h2>七、关键参数</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>项目</th><th>参数</th><th>项目</th><th>参数</th></tr>
+    <tr><td>合成阵元数</td><td class="mono">2（可扩展）</td><td>准直器间距 d</td><td class="mono">1.5 mm</td></tr>
+    <tr><td>参考波长 ch34</td><td class="mono">1550.12 nm</td><td>信号波长 ch36/ch40</td><td class="mono">1548.52 / 1545.34 nm</td></tr>
+    <tr><td>单波长速率</td><td class="mono">2.8 Gbps</td><td>总 FSO 速率</td><td class="mono">5.6 Gbps</td></tr>
+    <tr><td>PLL 环路带宽</td><td class="mono">20 kHz</td><td>PRBS</td><td class="mono">2³¹−1</td></tr>
+    <tr><td>EDFA 输出</td><td class="mono">+30 dBm</td><td>non-AR 回波</td><td class="mono">≈ −20 dB</td></tr>
+    <tr><td>参考激光线宽</td><td class="mono">100 kHz</td><td>链路距离</td><td class="mono">2 m</td></tr>
+  </table></div>
+ </div>
+</div>
+
+<!-- ANCHOR-GUIDE -->
+<!-- ================= 使用说明 ================= -->
+<div class="tab-pane" id="pane-guide">
+ <div class="docs-body">
+  <h2>模块 2 使用说明</h2>
+  <p>本模块含 <strong>5 个仿真</strong>：① 相干波束合成主工作台；② PLL 相位噪声/锁定；③ 菲涅耳反射；④ BER 曲线；⑤ 眼图。</p>
+
+  <h3>① 相干波束合成（CBC）</h3>
+  <ol>
+    <li>选择「合成单元数」1 / 2 / 4（文献为 2）；</li>
+    <li>调「相邻相位差 Δφ」（−π~π），方向图主瓣随之偏转，读数给出扫描角（Δφ=π 时约 516 μrad）；</li>
+    <li>切换 DWDM 波长通道，观察不同波长扫描角几乎不变（差约 0.3%）；</li>
+    <li>打开「相位失配误差」并调大，CBC 效率下降、主瓣降低——这正是 PLL 要消除的。</li>
+  </ol>
+  <div class="note"><strong>预期：</strong>2 单元理想锁定时 CBC 效率 100%、功率增益 +3 dB；主瓣零点宽约 0.5 mrad。</div>
+
+  <h3>② PLL 锁相环</h3>
+  <ol>
+    <li>调「PLL 环路带宽」（默认 20 kHz），观察闭环相位噪声曲线在带宽内被压低、带宽外跟随 VCO；</li>
+    <li>点「重新锁定」，状态由失锁（红/闪烁）变为已锁定，相位误差收敛。</li>
+  </ol>
+
+  <h3>③ 菲涅耳反射</h3>
+  <ol>
+    <li>调「透镜折射率 n₂」，界面反射率 $R=((n_2-n_1)/(n_2+n_1))^2$ 随之变化；</li>
+    <li>对比 AR 增透膜开关：non-AR 时回波约 −20 dB（文献值），AR 后回波显著降低；</li>
+    <li>示意图中粗光束透射、细箭头表示界面菲涅耳反射回波。</li>
+  </ol>
+
+  <h3>④ BER — 接收功率</h3>
+  <p>曲线显示单阵元与双阵元在<strong>平均每阵元接收功率</strong>口径下基本重合（贴合文献「无差异」）；约 −36 dBm 时 BER≈1e-6、−35 dBm≈1e-9。</p>
+
+  <h3>⑤ 眼图</h3>
+  <ol>
+    <li>调「链路 SNR」，眼图张开度变化；</li>
+    <li>读数给出估算 BER 与眼开度，SNR 越高眼睛越清晰。</li>
+  </ol>
+
+  <h3>参数速查 / FAQ</h3>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>控件</th><th>含义</th><th>文献值</th></tr>
+    <tr><td>合成单元数</td><td>CBC 阵元数</td><td class="mono">2</td></tr>
+    <tr><td>d</td><td>准直器间距</td><td class="mono">1.5 mm</td></tr>
+    <tr><td>Δφ</td><td>相邻相位差</td><td class="mono">最大 π → 516 μrad</td></tr>
+    <tr><td>PLL 带宽</td><td>锁相环闭环带宽</td><td class="mono">20 kHz</td></tr>
+    <tr><td>n₂ / AR</td><td>透镜折射率 / 增透膜</td><td class="mono">≈1.52 / non-AR −20 dB</td></tr>
+  </table></div>
+  <ul>
+    <li>方向图横轴为 mrad（1 mrad = 0.0573°），因阵元间距大、主瓣极窄；</li>
+    <li>图表空白请用 Live Server 打开并确认联网；公式为源码则刷新加载 KaTeX。</li>
+  </ul>
+ </div>
+</div>
+
+<div class="tab-pane" id="pane-scene3d">
+  <div class="wrap" style="max-width:none;padding:20px 26px"><div id="m2-scene"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../assets/js/scene3d.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  const P = window.OPA;
+  const chCbc = P.makeChart('m2-chart-cbc'), chPn = P.makeChart('m2-chart-pn'), chBer = P.makeChart('m2-chart-ber');
+
+  /* ---------- CBC 方向图（角度用 mrad） ---------- */
+  function drawCbc() {
+    const M = +document.getElementById('m2-units').value;
+    const d = +document.getElementById('m2-d').value / 1000;
+    const lam = +document.getElementById('m2-lam').value * 1e-9;
+    const dphi = +document.getElementById('m2-dphi').value;
+    const misOn = document.getElementById('m2-mis').checked;
+    const misAmp = +document.getElementById('m2-misamp').value;
+    const k = 2 * Math.PI / lam;
+    const delta = [];
+    for (let m = 0; m < M; m++) delta.push(misOn ? P.gaussRand() * misAmp : 0);
+
+    const ang0 = Math.asin(Math.max(-1, Math.min(1, dphi / (k * d)))) * 1000; // mrad
+    const range = 1.4, step = 0.01, ang = [], pw = [];
+    for (let a = ang0 - range; a <= ang0 + range; a += step) {
+      ang.push(+a.toFixed(2));
+      const th = a / 1000, s = Math.sin(th);
+      let re = 0, im = 0;
+      for (let n = 0; n < M; n++) {
+        const ph = k * d * s * n - n * dphi + delta[n];
+        re += Math.cos(ph); im += Math.sin(ph);
+      }
+      const I = (re * re + im * im) / (M * M);
+      pw.push(Math.max(-60, 10 * Math.log10(I + 1e-9)));
+    }
+    chCbc.setOption({
+      xAxis: { name: '角度 θ (mrad)', type: 'value', min: +(ang0 - range).toFixed(1), max: +(ang0 + range).toFixed(1) },
+      yAxis: { name: '归一化增益 (dB)', min: -40, max: 3 },
+      series: [P.patternSeries(ang, pw, 'CBC 方向图', '#2fd7d7')]
+    }, true);
+
+    // CBC 效率
+    let er = 0, ei = 0;
+    for (let n = 0; n < M; n++) { er += Math.cos(delta[n]); ei += Math.sin(delta[n]); }
+    const eff = (er * er + ei * ei) / (M * M);
+    const nullW = 2 * lam / (M * d) * 1000;
+    document.getElementById('m2-r-ang').textContent = ang0.toFixed(1) + ' μrad';
+    document.getElementById('m2-r-eff').textContent = (eff * 100).toFixed(1) + ' %';
+    document.getElementById('m2-r-gain').textContent = '+' + (10 * Math.log10(M)).toFixed(1) + ' dB';
+    document.getElementById('m2-r-w').textContent = nullW.toFixed(2) + ' mrad';
+  }
+
+  /* ---------- PLL 相位噪声 ---------- */
+  function drawPn() {
+    const BW = +document.getElementById('m2-pllbw').value * 1e3;
+    const f = [], po = [], pc = [];
+    for (let x = 3; x <= 6.01; x += 0.03) {
+      const ff = Math.pow(10, x);
+      f.push(+ff.toFixed(0));
+      const vco = -70 - 18 * Math.log10(ff / 1e3);
+      const ref = -105;
+      const r = ff / BW;
+      const lp = 1 / (1 + r * r), hp = r * r / (1 + r * r);
+      // 参考噪声经低通(带内跟随参考)，VCO 噪声经高通(带内被抑制)
+      const cl = 10 * Math.log10(Math.pow(10, ref / 10) * lp + Math.pow(10, vco / 10) * hp + 1e-15);
+      po.push(+vco.toFixed(1)); pc.push(+cl.toFixed(1));
+    }
+    chPn.setOption({
+      xAxis: { name: '偏移频率 (Hz)', type: 'log' },
+      yAxis: { name: '相位噪声 (dBc/Hz)', min: -130, max: -55 },
+      legend: { data: ['开环 VCO', '闭环 PLL'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      series: [
+        { name: '开环 VCO', type: 'line', showSymbol: false, data: f.map((q, i) => [q, po[i]]), lineStyle: { color: '#e26bd6', width: 2 } },
+        { name: '闭环 PLL', type: 'line', showSymbol: false, data: f.map((q, i) => [q, pc[i]]), lineStyle: { color: '#2fd7d7', width: 2.4 } }
+      ]
+    }, true);
+  }
+  async function relock() {
+    const st = document.getElementById('m2-lock-st');
+    st.className = 'pill-status run'; st.innerHTML = '<span class="b"></span>锁定中…';
+    await P.sleep(1300);
+    st.className = 'pill-status'; st.innerHTML = '<span class="b"></span>已锁定';
+  }
+
+  /* ---------- 菲涅耳反射 ---------- */
+  function drawFresFig() {
+    const cv = document.getElementById('m2-fres');
+    P.fitCanvas(cv, 150);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#0a1220'; ctx.fillRect(0, 0, W, H * 0.55);
+    ctx.fillStyle = '#13233f'; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+    ctx.strokeStyle = '#5a76a8'; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
+    // 入射光（粗）
+    ctx.strokeStyle = 'rgba(90,235,240,.9)'; ctx.lineWidth = 5 * dpr;
+    ctx.beginPath(); ctx.moveTo(W * 0.3, 0); ctx.lineTo(W * 0.5, H * 0.55); ctx.stroke();
+    // 透射
+    ctx.beginPath(); ctx.moveTo(W * 0.5, H * 0.55); ctx.lineTo(W * 0.68, H); ctx.stroke();
+    // 反射细箭头
+    ctx.strokeStyle = '#f6b942'; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath(); ctx.moveTo(W * 0.5, H * 0.55); ctx.lineTo(W * 0.68, H * 0.08); ctx.stroke();
+    ctx.fillStyle = '#f6b942'; ctx.font = `${10 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText('菲涅耳反射', W * 0.7, H * 0.12);
+    ctx.fillStyle = '#9fd9e8'; ctx.fillText('空气 n₁=1', 8, 16 * dpr);
+    ctx.fillText('GRIN 透镜 n₂', 8, H * 0.72);
+  }
+  function drawFresVal() {
+    const n2 = +document.getElementById('m2-n2').value;
+    const ar = document.getElementById('m2-ar').checked;
+    let R = Math.pow((n2 - 1) / (n2 + 1), 2);
+    if (ar) R *= 0.01;
+    const rl = -10 * Math.log10(R);
+    document.getElementById('m2-r-r').textContent = (R * 100).toFixed(2) + ' %';
+    document.getElementById('m2-r-rl').textContent = rl.toFixed(1) + ' dB';
+  }
+
+  /* ---------- BER ---------- */
+  function drawBer() {
+    const s1 = P.powerSweep(-41, -34, 0.25);
+    chBer.setOption({
+      xAxis: { name: '接收功率 (dBm)', type: 'value', min: -41, max: -34 },
+      yAxis: { name: 'BER', type: 'log', min: 1e-9, max: 1e-1 },
+      legend: { data: ['单阵元', '双阵元(平均口径)'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      series: [
+        { name: '单阵元', type: 'line', showSymbol: false, data: s1.P.map((q, i) => [q, s1.B[i]]), lineStyle: { color: '#4aa8ff', width: 2.2 } },
+        { name: '双阵元(平均口径)', type: 'line', showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2, type: 'dashed' },
+          data: s1.P.map((q, i) => [q, Math.max(1e-10, s1.B[i] * 0.92)]) }
+      ]
+    }, true);
+  }
+
+  /* ---------- 眼图 ---------- */
+  function drawEye() {
+    const cv = document.getElementById('m2-eye');
+    P.fitCanvas(cv, 230);
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#05080f'; ctx.fillRect(0, 0, W, H);
+    const snr = +document.getElementById('m2-snr').value;
+    const traces = P.eyeTrace(2.8, snr, 70, 22);
+    const mL = W * 0.12, mR = W * 0.92, mT = H * 0.12, mB = H * 0.88;
+    function X(x) { return mL + x / 2 * (mR - mL); }
+    function Y(y) { return mB - y * (mB - mT); }
+    // 参考线
+    ctx.strokeStyle = 'rgba(120,150,190,.3)'; ctx.setLineDash([4, 4]);
+    [0, .5, 1].forEach(y => { ctx.beginPath(); ctx.moveTo(mL, Y(y)); ctx.lineTo(mR, Y(y)); ctx.stroke(); });
+    ctx.beginPath(); ctx.moveTo(X(1), mT); ctx.lineTo(X(1), mB); ctx.stroke(); ctx.setLineDash([]);
+    // 轨迹
+    traces.forEach(t => {
+      ctx.strokeStyle = 'rgba(70,220,230,.32)'; ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      t.forEach((p, i) => { const x = X(p[0]), y = Y(p[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+    });
+    const sigma = Math.pow(10, -snr / 20);
+    const opening = Math.max(0, 1 - 2.6 * sigma);
+    const ber = P.qfunc(Math.sqrt(Math.pow(10, snr / 10) / 2));
+    document.getElementById('m2-r-ber').textContent = ber < 1e-9 ? '< 1e-9' : ber.toExponential(1);
+    document.getElementById('m2-r-eye').textContent = (opening * 100).toFixed(0) + ' %';
+  }
+
+  /* ---------- 事件 ---------- */
+  ['m2-units', 'm2-d', 'm2-dphi', 'm2-lam', 'm2-mis', 'm2-misamp'].forEach(id =>
+    document.getElementById(id).addEventListener('input', drawCbc));
+  document.getElementById('m2-pllbw').addEventListener('input', drawPn);
+  document.getElementById('m2-lock').addEventListener('click', relock);
+  ['m2-n2', 'm2-ar'].forEach(id => document.getElementById(id).addEventListener('input', drawFresVal));
+  document.getElementById('m2-snr').addEventListener('input', drawEye);
+
+  P.setupTabs();
+  if (window.OPA3D) window.OPA3D.mount(document.getElementById('m2-scene'),
+    { mode: 'm2', nOPA: 4, beamColor: 0x4aa8ff, title: '多波长 · 多 OPA 相干波束合成' });
+  drawCbc(); drawPn(); drawFresFig(); drawFresVal(); drawBer(); drawEye();
+  P.renderMath(document.getElementById('pane-theory'));
+  P.renderMath(document.getElementById('pane-guide'));
+})();
+</script>
+</body>
+</html>
