@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M5 · 相位控制算法优化 | OPA-FSO 仿真平台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 16h6M14 16l12-9M14 16l12 9M14 11v10' stroke='%232fd7d7' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../index.html">
+    <svg class="logo" viewBox="0 0 32 32"><path d="M4 16h6M14 16l12-9M14 16l12 9M14 11v10" stroke="#2fd7d7" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>
+    <span class="bt">OPA-FSO 仿真平台<small>OPTICAL PHASED ARRAY · FREE-SPACE OPTICS</small></span>
+  </a>
+  <nav class="topnav">
+    <a class="home" href="../index.html">首页</a>
+    <a href="module1-pat.html">M1</a><a href="module2-multiwavelength.html">M2</a>
+    <a href="module3-deeplearning.html">M3</a><a href="module4-monolithic.html">M4</a>
+    <a class="active" href="module5-algorithms.html">M5</a><a href="module6-highspeed.html">M6</a>
+  </nav>
+</header>
+
+<section class="mod-header">
+  <div class="crumb"><a href="../index.html">平台首页</a> / 模块 05</div>
+  <h1>硅光集成 OPA 的相位控制算法优化</h1>
+  <div class="src">Zhang R., et al. "Phase control algorithm optimization for optical phased array based on silicon photonic integration." <em>Optical and Quantum Electronics</em>, Vol.56, No.11, Art.1832, Nov. 2024.</div>
+  <div class="tags">
+    <span class="tag cyan">64 通道 SOI · 1550 nm</span><span class="tag">水平扫描 60° · 分辨率 0.3°</span>
+    <span class="tag amber">逐通道 duty-cycle 爬山</span><span class="tag magenta">Logistic 混沌遗传算法</span>
+  </div>
+</section>
+
+<div class="tabs">
+  <button class="tab-btn active" data-target="pane-sim">交互仿真</button>
+  <button class="tab-btn" data-target="pane-theory">理论分析</button>
+  <button class="tab-btn" data-target="pane-guide">使用说明</button>
+  <button class="tab-btn" data-target="pane-scene3d">三维场景</button>
+</div>
+
+<!-- ================= 交互仿真 ================= -->
+<div class="tab-pane active" id="pane-sim">
+
+  <div class="workbench">
+    <div>
+      <div class="panel">
+        <h4><span class="dot"></span>阵列与目标</h4>
+        <div class="ctrl"><label>阵元数 N <span class="val"></span></label>
+          <select id="m5-N"><option>16</option><option>32</option><option selected>64</option></select></div>
+        <div class="ctrl"><label>阵元间距 d <span class="val"></span></label>
+          <input type="range" id="m5-d" min="2" max="6" step="0.1" value="3"></div>
+        <div class="ctrl"><label>目标转向角 <span class="val"></span></label>
+          <input type="range" id="m5-target" min="-27" max="27" step="0.5" value="12"></div>
+        <div class="ctrl"><label>初始相位失配幅度 <span class="val"></span></label>
+          <input type="range" id="m5-err" min="0.2" max="2.5" step="0.1" value="1.4"></div>
+      </div>
+      <div class="panel">
+        <h4><span class="dot"></span>运行优化</h4>
+        <button class="btn" id="m5-run-hc" style="width:100%;margin-bottom:10px">运行逐通道爬山</button>
+        <button class="btn ghost" id="m5-run-ga" style="width:100%">运行遗传算法</button>
+        <button class="btn ghost" id="m5-run-both" style="width:100%;margin-top:10px">两者对比运行</button>
+      </div>
+      <div class="panel">
+        <h4><span class="dot"></span>结果对比</h4>
+        <div class="metrics">
+          <div class="metric"><div class="ml">爬山 SMSR</div><div class="mv cyan" id="m5-hc-smsr">—</div></div>
+          <div class="metric"><div class="ml">遗传 SMSR</div><div class="mv magenta" id="m5-ga-smsr">—</div></div>
+          <div class="metric"><div class="ml">爬山 评估次数/时间</div><div class="mv amber" id="m5-hc-eval">—</div></div>
+          <div class="metric"><div class="ml">遗传 评估次数/时间</div><div class="mv amber" id="m5-ga-eval">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="panel">
+        <h4><span class="dot"></span>收敛曲线：主瓣强度 vs 相位评估次数</h4>
+        <div class="chart-box tall" id="m5-chart-conv"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap" style="max-width:none;padding:0 26px">
+    <div class="stage-grid two">
+      <!-- 爬山逐通道 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>逐通道爬山：通道相位优化过程</h4>
+        <div class="canvas-box"><canvas id="m5-ch" style="height:220px"></canvas></div>
+        <div class="note" style="margin-top:8px;margin-bottom:0">逐通道依次扫描 duty（电压），热光温度稳定约 200 ms；越靠后通道，整体主瓣强度越高。</div>
+      </div>
+      <!-- GA 进化 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>遗传算法：种群适应度进化</h4>
+        <div class="chart-box" id="m5-chart-ga" style="height:220px"></div>
+        <div class="note" style="margin-top:8px;margin-bottom:0">最佳/平均适应度随代数上升；含选择、交叉、变异，评估次数远多于爬山。</div>
+      </div>
+    </div>
+
+    <div class="stage-grid two" style="margin-top:20px">
+      <!-- Logistic 混沌 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>Logistic 混沌初值生成（r=3.99, x₀=0.4）</h4>
+        <div class="chart-box" id="m5-chart-log" style="height:200px"></div>
+        <div class="note" style="margin-top:8px;margin-bottom:0">x<sub>n+1</sub>=r·x<sub>n</sub>(1−x<sub>n</sub>)，混沌序列×255 作为初始种群，保证多样性与遍历性。</div>
+      </div>
+      <!-- 远场多角 -->
+      <div class="panel" style="margin:0">
+        <h4><span class="dot"></span>远场扫描：记录角方向图</h4>
+        <div class="chart-box" id="m5-chart-far" style="height:200px"></div>
+        <div class="note" style="margin-top:8px;margin-bottom:0">记录角 −27/−25/0/+1/+25/+27°；水平扫描范围 60°，角分辨率 0.3°。</div>
+      </div>
+    </div>
+  </div>
+  <br><br>
+</div>
+
+<!-- ================= 理论分析 ================= -->
+<div class="tab-pane" id="pane-theory">
+ <div class="docs-body">
+  <h2>一、二维波束转向的相位关系</h2>
+  <p>SOI 平台 64 通道 OPA，横向由阵元相位差控制、纵向由波长经光栅控制：</p>
+  <div class="formula"><div class="flabel">横向（相位）</div>
+  $$\sin\theta_x=\frac{\lambda\,\varphi}{2\pi d}$$</div>
+  <div class="formula"><div class="flabel">纵向（光栅波长）</div>
+  $$\sin\theta_y=n_{\mathrm{eff}}-\frac{\lambda}{p}$$</div>
+  <p>$\varphi$ 相邻阵元相位差，$d$ 间距，$p$ 光栅周期。器件实现水平扫描范围 60°（±30°）、角分辨率 0.3°。</p>
+
+  <h2>二、热光相位器与 duty-cycle 控制</h2>
+  <p>相位调节采用热光（TO）加热器，通过 PWM/duty-cycle 改变加热功率进而改变折射率。热光过程需等待温度稳定，单次约 <strong>200 ms</strong>；这是相位优化耗时的主要来源，因此“相位评估次数”直接决定算法速度。</p>
+
+  <h2>三、逐通道爬山算法（Hill-Climbing）</h2>
+  <p>基本思想：<strong>固定其余通道，依次对每个通道扫描 duty（电压），找到使目标方向强度最大的取值</strong>，再进入下一通道。</p>
+  <ol>
+    <li>初始化各通道（含随机失配）；</li>
+    <li>对通道 $i$，在 duty 范围（0–255）内逐档扫描，评估目标角远场强度，取最优；</li>
+    <li>$i$ 依次推进直到所有通道；</li>
+    <li>主瓣强度随通道数单调上升（图10）。</li>
+  </ol>
+  <p>优点：实现简单、评估次数少（≈ N×每通道档数）、收敛快；缺点：逐通道贪心，可能受通道耦合影响、非严格全局最优。</p>
+
+  <h2>四、遗传算法（GA）与 Logistic 混沌初始化</h2>
+  <p>为保证初始种群多样性与遍历性，用 <strong>Logistic 混沌映射</strong>生成初始电压：</p>
+  <div class="formula"><div class="flabel">Logistic 映射</div>
+  $$x_{n+1}=r\,x_n(1-x_n),\qquad r=3.99,\ x_0=0.4$$</div>
+  <p>迭代得到的混沌序列在 (0,1) 内遍历，乘以 255 得 8-bit duty 初值。GA 流程：</p>
+  <ol>
+    <li><strong>编码/初始化：</strong>每个个体为 N 通道 duty 串，混沌生成；</li>
+    <li><strong>适应度：</strong>目标角远场强度；</li>
+    <li><strong>选择：</strong>轮盘赌/锦标赛保留高适应度个体；</li>
+    <li><strong>交叉：</strong>单点交叉重组；</li>
+    <li><strong>变异：</strong>小概率随机扰动，避免早熟；</li>
+    <li>迭代若干代直到收敛。</li>
+  </ol>
+  <p>优点：群体并行搜索、全局寻优能力强、对耦合更鲁棒；缺点：需评估整个种群很多代，评估次数大、耗时长。</p>
+
+  <h2>五、两种算法对比</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>维度</th><th>逐通道爬山</th><th>遗传算法</th></tr>
+    <tr><td>搜索方式</td><td>逐通道贪心</td><td>种群并行、全局</td></tr>
+    <tr><td>评估次数</td><td>少（≈N×档数）</td><td>多（种群×代数）</td></tr>
+    <tr><td>硬件耗时（200 ms/次）</td><td>短</td><td>约为爬山的 10 倍</td></tr>
+    <tr><td>全局最优</td><td>易受耦合/局部影响</td><td>更鲁棒</td></tr>
+    <tr><td>实现复杂度</td><td>简单</td><td>较复杂</td></tr>
+  </table></div>
+  <div class="note green"><strong>文献结论：</strong>在 64 通道硅光 OPA 上，逐通道 duty-cycle 爬山在保持良好 SMSR 的同时，比遗传算法快约 10 倍，更适合需要快速相位锁定的工程应用；GA 适用于对全局最优要求高、可离线校准的场合。</div>
+
+  <h2>六、远场扫描结果</h2>
+  <p>远场记录 −27°、−25°、0°、+1°、+25°、+27° 等角度的波束（图11），验证水平 60° 扫描范围与 0.3° 角分辨率；各角度主瓣清晰、SMSR 满足通信要求。</p>
+
+  <h2>七、关键参数</h2>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>项目</th><th>参数</th><th>项目</th><th>参数</th></tr>
+    <tr><td>通道数</td><td class="mono">64</td><td>波长</td><td class="mono">1550 nm</td></tr>
+    <tr><td>水平扫描</td><td class="mono">60°（±30°）</td><td>角分辨率</td><td class="mono">0.3°</td></tr>
+    <tr><td>相位器</td><td class="mono">热光 TO</td><td>温度稳定</td><td class="mono">≈200 ms</td></tr>
+    <tr><td>Logistic r/x₀</td><td class="mono">3.99 / 0.4</td><td>duty 量化</td><td class="mono">8-bit (×255)</td></tr>
+    <tr><td>记录角</td><td class="mono" colspan="3">−27,−25,0,+1,+25,+27°</td></tr>
+  </table></div>
+ </div>
+</div>
+
+<!-- ANCHOR-GUIDE -->
+<!-- ================= 使用说明 ================= -->
+<div class="tab-pane" id="pane-guide">
+ <div class="docs-body">
+  <h2>模块 5 使用说明</h2>
+  <p>本模块对比<strong>逐通道爬山</strong>与<strong>遗传算法</strong>两种相位优化，并可视化 Logistic 混沌初始化与远场扫描。</p>
+
+  <h3>第一步：设置阵列与目标</h3>
+  <ol>
+    <li>选 N（默认 64）、d（默认 3 μm）；</li>
+    <li>设目标转向角（−27~27°，默认 12°）；</li>
+    <li>设初始相位失配幅度（越大初始波束越乱，默认 1.4 rad）。</li>
+  </ol>
+
+  <h3>第二步：运行优化</h3>
+  <ul>
+    <li><strong>运行逐通道爬山：</strong>快速收敛，青色曲线；</li>
+    <li><strong>运行遗传算法：</strong>品红曲线，评估次数多；</li>
+    <li><strong>两者对比运行：</strong>在同一图叠加，直观比较收敛速度与最终强度。</li>
+  </ul>
+  <div class="note"><strong>读数说明：</strong>算法在浏览器毫秒级完成；“时间”按热光相位器 200 ms/次稳定估算，爬山约为 GA 的 1/10，与文献“快约 10 倍”一致。</div>
+
+  <h3>第三步：查看过程可视化</h3>
+  <ul>
+    <li><strong>逐通道爬山热图：</strong>横轴通道、颜色为该通道优化后相位，随通道推进主瓣增强；</li>
+    <li><strong>GA 适应度进化：</strong>最佳/平均适应度随代数上升；</li>
+    <li><strong>Logistic 混沌：</strong>混沌序列散点/折线，展示初值遍历性；</li>
+    <li><strong>远场扫描：</strong>−27~+27 记录角方向图叠加，体现 60° 范围、0.3° 分辨率。</li>
+  </ul>
+
+  <h3>参数速查 / FAQ</h3>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>控件</th><th>含义</th><th>文献值</th></tr>
+    <tr><td>N / d</td><td>通道数 / 间距</td><td class="mono">64 / 3 μm</td></tr>
+    <tr><td>目标角</td><td>期望主瓣方向</td><td class="mono">−27~27°</td></tr>
+    <tr><td>失配幅度</td><td>初始随机相位误差</td><td class="mono">—</td></tr>
+    <tr><td>GA 参数</td><td>种群/代数（内置）</td><td class="mono">混沌 r=3.99</td></tr>
+  </table></div>
+  <ul>
+    <li>爬山曲线阶梯状（每通道一档档扫描）；GA 曲线按代平滑上升；</li>
+    <li>若两算法 SMSR 都很高但 GA 时间长，正说明“质量相近、爬山更快”的核心结论；</li>
+    <li>图表/公式异常用 Live Server 打开并确认联网。</li>
+  </ul>
+ </div>
+</div>
+
+<div class="tab-pane" id="pane-scene3d">
+  <div class="wrap" style="max-width:none;padding:20px 26px"><div id="m5-scene"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="../assets/js/scene3d.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  const P = window.OPA, LAM = 1550e-9;
+  const chConv = P.makeChart('m5-chart-conv'), chGa = P.makeChart('m5-chart-ga'),
+        chLog = P.makeChart('m5-chart-log'), chFar = P.makeChart('m5-chart-far');
+
+  function cfg() {
+    return { N: +document.getElementById('m5-N').value, d: +document.getElementById('m5-d').value * 1e-6,
+             goal: +document.getElementById('m5-target').value, err: +document.getElementById('m5-err').value };
+  }
+  function gain(v, g, N, d) {
+    let re = 0, im = 0; const k = 2 * Math.PI / LAM, s = k * d * Math.sin(g * P.D2R);
+    for (let n = 0; n < N; n++) { const ph = v[n] * 2 * Math.PI + s * n; re += Math.cos(ph); im += Math.sin(ph); }
+    return (re * re + im * im) / (N * N);
+  }
+  function initVolt(c) {
+    const ideal = P.linearPhases(c.N, c.goal, c.d, LAM).phases;
+    return ideal.map(p => { let m = (p + (Math.random() * 2 - 1) * c.err) % (2 * Math.PI); if (m < 0) m += 2 * Math.PI; return m / (2 * Math.PI); });
+  }
+  function smsrOf(v, c) {
+    const phases = v.map(q => q * 2 * Math.PI);
+    const r = P.arrayFactor1D({ N: c.N, d: c.d, lambda: LAM, phases, angMin: c.goal - 3, angMax: c.goal + 3, angStep: .02 });
+    return P.analyzePattern(r.ang, r.psi).pslr;
+  }
+
+  /* ---------- 逐通道爬山 ---------- */
+  function hillClimb(c) {
+    const volt = initVolt(c), curve = [], prog = []; let evals = 0;
+    for (let ch = 0; ch < c.N; ch++) {
+      let best = volt[ch], bestG = gain(volt, c.goal, c.N, c.d);
+      for (let t = 0; t <= 8; t++) {
+        volt[ch] = t / 8; const g = gain(volt, c.goal, c.N, c.d); evals++;
+        curve.push([evals, g]);
+        if (g > bestG) { bestG = g; best = t / 8; }
+      }
+      volt[ch] = best; prog.push(volt.slice());
+    }
+    return { volt, curve, evals, prog, final: gain(volt, c.goal, c.N, c.d) };
+  }
+
+  /* ---------- 遗传算法 ---------- */
+  const POP = 36, GENS = 150, R = 3.99;
+  function gaRun(c) {
+    let x = 0.4; const pop = [];
+    for (let p = 0; p < POP; p++) { const v = []; for (let n = 0; n < c.N; n++) { x = R * x * (1 - x); v.push(x); } pop.push(v); }
+    const curve = [], bestH = [], avgH = []; let evals = 0, gBest = null, gG = -1;
+    for (let gen = 1; gen <= GENS; gen++) {
+      const fits = pop.map(v => { const g = gain(v, c.goal, c.N, c.d); evals++; curve.push([evals, g]); return g; });
+      let bi = 0, sum = 0;
+      fits.forEach((f, i) => { sum += f; if (f > fits[bi]) bi = i; });
+      if (fits[bi] > gG) { gG = fits[bi]; gBest = pop[bi].slice(); }
+      bestH.push(fits[bi]); avgH.push(sum / POP);
+      // 进化
+      const np = [pop[bi].slice()];
+      const tour = () => { let b = -1; for (let k = 0; k < 3; k++) { const q = Math.floor(Math.random() * POP); if (b < 0 || fits[q] > fits[b]) b = q; } return pop[b]; };
+      while (np.length < POP) {
+        let a = tour().slice(), b = tour().slice(); const cp = Math.floor(Math.random() * c.N);
+        for (let k = cp; k < c.N; k++) { const t = a[k]; a[k] = b[k]; b[k] = t; }
+        a = a.map(q => Math.random() < .03 ? Math.random() : q);
+        b = b.map(q => Math.random() < .03 ? Math.random() : q);
+        np.push(a); if (np.length < POP) np.push(b);
+      }
+      for (let k = 0; k < POP; k++) pop[k] = np[k];
+    }
+    return { volt: gBest, curve, evals, bestH, avgH, final: gG };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function fmtTime(ev) { const s = ev * .2; return s >= 60 ? (s / 60).toFixed(1) + ' min' : s.toFixed(0) + ' s'; }
+  async function runBoth() {
+    const c = cfg();
+    document.getElementById('m5-run-hc').disabled = true; document.getElementById('m5-run-ga').disabled = true;
+    const hc = hillClimb(c);
+    chConv.setOption({
+      xAxis: { name: '评估次数', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
+      legend: { data: ['逐通道爬山', '遗传算法'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      series: [
+        { name: '逐通道爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 } }
+      ]
+    }, true);
+    drawChHeat(hc, c);
+    document.getElementById('m5-hc-smsr').textContent = smsrOf(hc.volt, c).toFixed(2) + ' dB';
+    document.getElementById('m5-hc-eval').textContent = hc.evals + ' / ' + fmtTime(hc.evals);
+    await P.sleep(30);
+    const ga = gaRun(c);
+    chConv.setOption({ series: [
+      { name: '逐通道爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 } },
+      { name: '遗传算法', type: 'line', data: ga.curve, showSymbol: false, lineStyle: { color: '#e26bd6', width: 1.8 } }
+    ] });
+    chGa.setOption({
+      xAxis: { name: '代数', type: 'value', min: 1, max: GENS }, yAxis: { name: '适应度', min: 0, max: 1 },
+      legend: { data: ['最佳', '平均'], textStyle: { color: '#a7b8d6' }, top: 4 },
+      series: [
+        { name: '最佳', type: 'line', showSymbol: false, data: ga.bestH.map((q, i) => [i + 1, q]), lineStyle: { color: '#e26bd6', width: 2.2 } },
+        { name: '平均', type: 'line', showSymbol: false, data: ga.avgH.map((q, i) => [i + 1, q]), lineStyle: { color: '#f6b942', width: 1.6, type: 'dashed' } }
+      ]
+    }, true);
+    document.getElementById('m5-ga-smsr').textContent = smsrOf(ga.volt, c).toFixed(2) + ' dB';
+    document.getElementById('m5-ga-eval').textContent = ga.evals + ' / ' + fmtTime(ga.evals);
+    document.getElementById('m5-run-hc').disabled = false; document.getElementById('m5-run-ga').disabled = false;
+  }
+
+  function drawChHeat(hc, c) {
+    const cv = document.getElementById('m5-ch'); P.fitCanvas(cv, 220);
+    const M = hc.prog.map(row => row.map(q => q));
+    P.renderHeatmap(cv, M, [], [], { gamma: 1 });
+    const ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#e7eefb'; ctx.font = `${9 * dpr}px 'JetBrains Mono'`;
+    ctx.fillText('通道 →', cv.width - 60, cv.height - 8);
+    ctx.save(); ctx.translate(11, cv.height / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText('优化进度（已完成通道）', 0, 0); ctx.restore();
+  }
+
+  function drawLog() {
+    let x = 0.4; const X = [0], Y = [x];
+    for (let n = 1; n <= 80; n++) { x = R * x * (1 - x); X.push(n); Y.push(+x.toFixed(3)); }
+    chLog.setOption({
+      xAxis: { name: 'n', type: 'value' }, yAxis: { name: 'x_n', min: 0, max: 1 },
+      series: [{ type: 'line', data: X.map((q, i) => [q, Y[i]]), showSymbol: true, symbolSize: 3,
+        lineStyle: { color: '#f6b942', width: 1.6 }, itemStyle: { color: '#f6b942' } }]
+    }, true);
+  }
+  function drawFar() {
+    const c = { N: 64, d: 3e-6 }, recs = [-27, -25, 0, 1, 25, 27], cols = ['#e26bd6', '#f6b942', '#2fd7d7', '#4ade9a', '#7aa2ff', '#ff8fb0'];
+    const series = recs.map((g, i) => {
+      const ph = P.linearPhases(c.N, g, c.d, LAM).phases;
+      const r = P.arrayFactor1D({ N: c.N, d: c.d, lambda: LAM, phases: ph, angMin: -30, angMax: 30, angStep: .1 });
+      return { name: g + '°', type: 'line', showSymbol: false, data: r.ang.map((q, k) => [q, r.db[k]]), lineStyle: { color: cols[i], width: 1.6 } };
+    });
+    chFar.setOption({
+      xAxis: { name: '角度 (°)', type: 'value', min: -30, max: 30 }, yAxis: { name: '增益 (dB)', min: -40, max: 3 },
+      legend: { data: recs.map(q => q + '°'), textStyle: { color: '#a7b8d6' }, top: 4, type: 'scroll' }, series
+    }, true);
+  }
+
+  document.getElementById('m5-run-both').addEventListener('click', runBoth);
+  document.getElementById('m5-run-hc').addEventListener('click', async () => {
+    const c = cfg(); const hc = hillClimb(c);
+    chConv.setOption({ xAxis: { name: '评估次数', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
+      series: [{ name: '爬山', type: 'line', data: hc.curve, showSymbol: false, lineStyle: { color: '#2fd7d7', width: 2.2 } }] }, true);
+    drawChHeat(hc, c);
+    document.getElementById('m5-hc-smsr').textContent = smsrOf(hc.volt, c).toFixed(2) + ' dB';
+    document.getElementById('m5-hc-eval').textContent = hc.evals + ' / ' + fmtTime(hc.evals);
+  });
+  document.getElementById('m5-run-ga').addEventListener('click', async () => {
+    const c = cfg(); const ga = gaRun(c);
+    chConv.setOption({ xAxis: { name: '评估次数', type: 'value' }, yAxis: { name: '主瓣强度', min: 0, max: 1.05 },
+      series: [{ name: 'GA', type: 'line', data: ga.curve, showSymbol: false, lineStyle: { color: '#e26bd6', width: 1.8 } }] }, true);
+    chGa.setOption({ xAxis: { name: '代数', type: 'value', min: 1, max: GENS }, yAxis: { name: '适应度', min: 0, max: 1 },
+      series: [
+        { type: 'line', showSymbol: false, data: ga.bestH.map((q, i) => [i + 1, q]), lineStyle: { color: '#e26bd6', width: 2.2 } },
+        { type: 'line', showSymbol: false, data: ga.avgH.map((q, i) => [i + 1, q]), lineStyle: { color: '#f6b942', width: 1.6, type: 'dashed' } }
+      ] }, true);
+    document.getElementById('m5-ga-smsr').textContent = smsrOf(ga.volt, c).toFixed(2) + ' dB';
+    document.getElementById('m5-ga-eval').textContent = ga.evals + ' / ' + fmtTime(ga.evals);
+  });
+
+  P.setupTabs();
+  if (window.OPA3D) window.OPA3D.mount(document.getElementById('m5-scene'),
+    { mode: 'm5', nOPA: 4, beamColor: 0xf6b942, title: '算法优化 · 多 OPA 相位锁定' });
+  drawLog(); drawFar(); runBoth();
+  P.renderMath(document.getElementById('pane-theory'));
+  P.renderMath(document.getElementById('pane-guide'));
+})();
+</script>
+</body>
+</html>
